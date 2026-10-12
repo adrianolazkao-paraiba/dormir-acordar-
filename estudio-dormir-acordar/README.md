@@ -27,7 +27,8 @@ Sem eles o app funciona, mas não troca o fundo das fotos.
 Clique duas vezes em **`Abrir Estudio.command`**. Na primeira vez o macOS pode bloquear:
 clique com o botão direito no arquivo → **Abrir** → **Abrir**. Se o Node.js não estiver
 instalado, o próprio arquivo baixa uma cópia só para esta pasta (sem senha), liga o estúdio
-e abre o navegador. Deixe a janela do Terminal aberta enquanto usa.
+e abre o navegador. Se faltarem os arquivos do recorte em `model/`, ele procura
+os `modelo-recorte-*.zip` na pasta Downloads e coloca no lugar. Deixe a janela do Terminal aberta enquanto usa.
 
 ## Rodar no seu computador
 

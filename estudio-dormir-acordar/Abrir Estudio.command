@@ -32,6 +32,25 @@ else
   fi
 fi
 
+# Arquivos do recorte: se faltarem em model/, procura nos Downloads (soltos ou nos .zip modelo-recorte)
+for i in 0 1 2 3; do
+  ARQ_MOD="isnet-w8.part$i.dat.wasm"
+  [ -f "model/$ARQ_MOD" ] && continue
+  ACHADO=$(find "$HOME/Downloads" "$HOME/Desktop" -maxdepth 3 -name "$ARQ_MOD" -type f 2>/dev/null | head -1)
+  if [ -n "$ACHADO" ]; then
+    cp "$ACHADO" "model/$ARQ_MOD"
+  else
+    for Z in "$HOME"/Downloads/*modelo-recorte*.zip "$HOME"/Desktop/*modelo-recorte*.zip; do
+      [ -f "$Z" ] && unzip -o -j -q "$Z" "*$ARQ_MOD" -d model 2>/dev/null
+    done
+  fi
+done
+FALTAM=0; for i in 0 1 2 3; do [ -f "model/isnet-w8.part$i.dat.wasm" ] || FALTAM=1; done
+if [ "$FALTAM" = 1 ]; then
+  echo "  Aviso: faltam os arquivos do recorte (modelo-recorte-1-de-2.zip e 2-de-2.zip)."
+  echo "  Deixe esses .zip na pasta Downloads e abra de novo. Sem eles o estúdio abre, mas não troca o fundo."
+fi
+
 # Se já estiver aberto, só abre o navegador
 if curl -s -o /dev/null "http://localhost:$PORTA"; then
   open "http://localhost:$PORTA"
