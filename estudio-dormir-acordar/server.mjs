@@ -11,7 +11,7 @@ const TYPES = {
   ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8", ".json": "application/json", ".wasm": "application/wasm",
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml",
-  ".webm": "video/webm", ".mp4": "video/mp4", ".ico": "image/x-icon",
+  ".webm": "video/webm", ".mp4": "video/mp4", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json",
 };
 
 createServer(async (req, res) => {

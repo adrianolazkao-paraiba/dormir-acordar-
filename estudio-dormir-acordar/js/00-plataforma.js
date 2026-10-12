@@ -79,9 +79,19 @@
     delete: async(id)=>{ await tx("blobs","readwrite", s=>req(s.delete(id))); const u=urls.get(id); if(u){ URL.revokeObjectURL(u); urls.delete(id); } return { deleted:true }; },
   };
 
-  /* ---- downloads: baixa direto ---- */
+  /* ---- downloads: no celular/tablet abre a tela de compartilhar (salvar em Fotos/Galeria, WhatsApp, Instagram);
+     no computador, ou se o aparelho não deixar, baixa direto ---- */
+  const toque = matchMedia("(pointer:coarse)").matches;
   const downloads = { save: async({filename, data})=>{
     const blob = data instanceof Blob ? data : new Blob([data]);
+    if (toque && navigator.canShare && !/\.zip$/i.test(filename)) {
+      const type = blob.type || (/\.mp4$/i.test(filename) ? "video/mp4" : /\.jpe?g$/i.test(filename) ? "image/jpeg" : "application/octet-stream");
+      const file = new File([blob], filename, {type});
+      if (navigator.canShare({files:[file]})) {
+        try { await navigator.share({files:[file]}); return { status:"saved" }; }
+        catch (e) { if (e && e.name === "AbortError") throw {code:"declined"}; /* sem permissão para compartilhar: baixa direto */ }
+      }
+    }
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000); return { status:"saved" }; } };
 
