@@ -22,7 +22,7 @@ function bind(){
   $("scrub").addEventListener("input",e=>{ const it=S.sel; if(!it||it.kind!=="video") return; seek(e.target.value/1000*it.dur); it.el.addEventListener("seeked",()=>{ tick(); },{once:true}); });
   $("sound").addEventListener("change",e=>{ const it=S.sel; if(it&&it.kind==="video"&&!S.busy) it.el.muted=!e.target.checked; });
   $("capBtn").addEventListener("click",writeCaptions);
-  $("pairSel").addEventListener("change",e=>{ const it=S.sel; if(!it) return; const o=S.items.find(x=>String(x.id)===e.target.value)||null;
+  $("pairSel").addEventListener("change",e=>{ const it=viewItem(); if(!it) return; const o=S.items.find(x=>String(x.id)===e.target.value)||null;
     if(o && o.pair===it) o.pair=null; // evita frente e costas apontando uma para a outra
     it.pair=o; it.solo=!o; if(o){ o.solo=false; if(needsCut()) queueCut(o); } stopPreview(); renderItems(); renderGrid(); renderDock(); schedule(); });
   $("pairLabels").addEventListener("change",e=>{ S.pairLabels=e.target.checked; schedule(); });

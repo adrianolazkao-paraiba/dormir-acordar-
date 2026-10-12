@@ -55,9 +55,18 @@ async function addFiles(files){
     }
   }
   autoPair();
-  // abre a primeira foto nova (a de frente), para já mostrar frente e costas e o vídeo da montagem
-  const firstPhoto=S.items.find(i=>i.kind==="photo" && !i.example && i.id>=firstNewId && !isBackOfAnother(i));
-  if(firstPhoto||firstNew) select(firstPhoto||firstNew);
+  // abre a peça da primeira foto nova (se ela virou costas, abre a frente dela)
+  const front=p=>S.items.find(o=>o!==p && o.pair===p && o.kind==="photo") || p;
+  const newPhoto=S.items.find(i=>i.kind==="photo" && !i.example && i.id>=firstNewId);
+  const pairs=S.items.filter(i=>i.kind==="photo" && !i.example && backOf(i));
+  const vidOnly=firstNew && firstNew.kind==="video" && !newPhoto;
+  if(newPhoto) select(front(newPhoto));
+  else if(vidOnly && pairs.length){ // vídeo novo para uma peça que já tem frente e costas: mostra o 7º espaço
+    const cur=viewItem(); select(cur && cur.kind==="photo" && backOf(cur) ? cur : pairs[0]);
+    toast("Vídeo adicionado. O vídeo frente + costas + vídeo está no último espaço.");
+    setTimeout(()=>{ const c=document.querySelector(".mcard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },300);
+  }
+  else if(firstNew) select(firstNew);
   renderAll();
 }
 /* frente e costas automáticas pela ordem de envio: 1ª foto = frente, 2ª = costas, 3ª = frente, 4ª = costas…
@@ -73,7 +82,7 @@ function autoPair(){
 }
 /* troca quem é frente e quem é costas (a ordem das fotos escolhidas no celular nem sempre é a esperada) */
 function swapPair(){
-  const f=S.sel, b=f&&backOf(f); if(!b) return;
+  const f=viewItem(), b=f&&backOf(f); if(!b) return;
   stopPreview(); f.pair=null; b.pair=f;
   const i=S.items.indexOf(f), j=S.items.indexOf(b); S.items[i]=b; S.items[j]=f; // a nova frente vem antes
   select(b);

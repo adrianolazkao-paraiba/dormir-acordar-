@@ -2,6 +2,8 @@
 /* ============ Frente e costas: duas fotos da mesma peça lado a lado ============ */
 function backOf(item){ const b=item.pair; return (b && b!==item && S.items.includes(b) && b.kind==="photo") ? b : null; }
 function isBackOfAnother(it){ return S.items.some(o=>o!==it && o.pair===it && o.kind==="photo"); }
+/* o que a tela mostra: com a foto de costas aberta, mostra a peça inteira (a frente com as costas ao lado) */
+function viewItem(){ const it=S.sel; if(it && it.kind==="photo"){ const f=S.items.find(o=>o!==it && o.pair===it && o.kind==="photo"); if(f) return f; } return it; }
 function pairSlots(W,H,fmt,plan){
   const unit=Math.min(W,H*.8), lab=S.pairLabels? unit*.055 : 0;
   const box = fmt.forceScene ? {x0:W*.05,x1:W*.95,y0:H*.07} : (plan.box||{x0:W*.06,x1:W*.94,y0:H*.06});

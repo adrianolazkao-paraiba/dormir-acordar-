@@ -115,10 +115,18 @@ test("frente e costas automáticas e vídeo frente + costas + vídeo (7º espaç
   await page.click("#pairSwap");
   expect(await page.evaluate(() => S.sel.name === "costas.png" && S.items[0].name === "costas.png" && backOf(S.items[0]).name === "frente.png")).toBe(true);
   await page.click("#pairSwap");
-  // com o vídeo, aparece o 7º espaço na foto de frente
+  // tocar nas costas mostra a peça inteira (frente + costas)
+  await page.click(".item >> nth=1");
+  expect(await page.evaluate(() => S.sel.name === "costas.png" && viewItem().name === "frente.png")).toBe(true);
+  await expect(page.locator("#grid .card")).toHaveCount(6);
+  // vídeo enviado depois: continua na peça e o 7º espaço aparece
   await page.setInputFiles("#file", FIX + "video-teste.webm");
-  await expect(page.locator("#grid .card")).toHaveCount(3); // modo vídeo continua igual
-  await page.click(".item >> nth=0");
+  await expect(page.locator("#grid .card")).toHaveCount(7);
+  await expect(page.locator("#toast")).toContainText("último espaço");
+  // modo vídeo continua com os 3 formatos e tem o atalho de volta
+  await page.click(".item >> nth=2");
+  await expect(page.locator("#grid .card")).toHaveCount(3);
+  await page.click("#goMontage");
   await expect(page.locator("#grid .card")).toHaveCount(7);
   await expect(page.locator(".mcard")).toContainText("frente + costas + vídeo");
   const plano = await page.evaluate(() => ({ ...montagePlan(montageSource()), cartao: S.endCard }));

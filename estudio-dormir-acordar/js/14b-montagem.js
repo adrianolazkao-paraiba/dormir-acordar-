@@ -8,7 +8,7 @@ const MONT = { PHOTO:3, END:2, XF:.4, FMTS:["vertical","feed"], video:null, card
 function montageFormats(){ return MONT.FMTS.map(id=>FORMATS.find(f=>f.id===id)); }
 /* frente = foto aberta, costas = a ligada a ela, vídeo = o escolhido (ou o primeiro enviado) */
 function montageSource(){
-  const it=S.sel; if(!it || it.kind!=="photo" || it.example) return null;
+  const it=viewItem(); if(!it || it.kind!=="photo" || it.example) return null;
   const back=backOf(it); if(!back) return null;
   const vids=S.items.filter(i=>i.kind==="video"); if(!vids.length) return null;
   return { front:it, back, vid:vids.find(v=>v.id===MONT.video)||vids[0], vids };

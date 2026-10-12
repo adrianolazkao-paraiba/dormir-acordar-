@@ -164,7 +164,8 @@ function subjectLayout(item, W, H, fmt, plan, sForce){
   // nos formatos verticais o corpo inteiro fica acima da área da legenda e do carrinho do TikTok/Instagram,
   // mesmo quando a foto termina colada nos pés (ou é de meio corpo: aí a borda de baixo é esfumada)
   const floorY = fmt.vertical ? H*(1-SAFE_V.b+.015) : H*(fmt.forceScene? .93 : .925);
-  const bottom0 = cutAtBottom && !fmt.vertical ? H : floorY;
+  const keepUp = !!fmt.vertical || !!(plan&&plan.pairSlot); // 9:16 e frente/costas lado a lado: todos no mesmo chão
+  const bottom0 = cutAtBottom && !keepUp ? H : floorY;
   let x0,x1,y0, availH, availW;
   if(fmt.forceScene){ const f=fmt.fill||.84; availH=H*f; availW=W*f; x0=0; x1=W; }
   else { const bx = (plan&&plan.box) || {x0:W*.08,x1:W*.92,y0:H*.08}; x0=bx.x0; x1=bx.x1; y0=bx.y0; availH=(bottom0-y0)*.98; availW=x1-x0; }
@@ -174,8 +175,8 @@ function subjectLayout(item, W, H, fmt, plan, sForce){
   const x = cx - (b.x + b.w/2)*s, y = bottom - (b.y+b.h)*s;
   // foto que termina nos pés mas mostra o corpo inteiro (bem mais alta que larga): pés firmes, com sombra no chão;
   // só a de meio corpo ganha o esfumado embaixo
-  const fullBody = b.h/b.w >= 1.8, standUp = cutAtBottom && !!fmt.vertical && fullBody;
-  return { s, x, y, cutAtBottom: cutAtBottom && !standUp, fadeBottom: cutAtBottom && !!fmt.vertical && !fullBody, footX:cx, footY:bottom, fw:b.w*s };
+  const fullBody = b.h/b.w >= 1.8, standUp = cutAtBottom && keepUp && fullBody;
+  return { s, x, y, cutAtBottom: cutAtBottom && !standUp, fadeBottom: cutAtBottom && keepUp && !fullBody, footX:cx, footY:bottom, fw:b.w*s };
 }
 function drawSubject(ctx, item, W, H, fmt, sceneId, plan, Lgiven){
   const L=Lgiven||subjectLayout(item,W,H,fmt,plan);

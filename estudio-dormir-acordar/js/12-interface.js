@@ -2,7 +2,7 @@
 /* ============ Interface ============ */
 function photoNumber(it){ return S.items.filter(i=>i.kind==="photo"&&!i.example).indexOf(it)+1; }
 function renderPair(){
-  const it=S.sel, box=$("pairBox"), others=S.items.filter(o=>o!==it && o.kind==="photo" && !o.example);
+  const it=viewItem(), box=$("pairBox"), others=S.items.filter(o=>o!==it && o.kind==="photo" && !o.example);
   box.hidden = !(it && it.kind==="photo" && !it.example && others.length);
   if(box.hidden) return;
   const sel=$("pairSel"); sel.innerHTML="";
@@ -75,7 +75,7 @@ function formatsFor(it){ return FORMATS.filter(f=>f.media.includes(it.kind)); }
 let cards=new Map();
 function renderGrid(){
   const grid=$("grid"); grid.innerHTML=""; cards.clear();
-  const it=S.sel; if(!it){ grid.innerHTML='<p class="empty">Envie uma foto ou vídeo para começar.</p>'; return; }
+  const it=viewItem(); if(!it){ grid.innerHTML='<p class="empty">Envie uma foto ou vídeo para começar.</p>'; return; }
   for(const fmt of formatsFor(it)){
     const card=document.createElement("article"); card.className="card";
     const plat=document.createElement("div"); plat.className="plat"; plat.textContent=fmt.plat;
@@ -116,7 +116,7 @@ function drawZones(el,fmt){
 let rafPending=false;
 function schedule(){ if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{ rafPending=false; drawPreviews(); }); }
 function drawPreviews(){
-  const it=S.sel; if(!it) return;
+  const it=viewItem(); if(!it) return;
   const dpr=Math.min(2,window.devicePixelRatio||1);
   const t = it.kind==="video" ? it.el.currentTime : null;
   for(const {cv,warn,fmt} of cards.values()){
@@ -137,6 +137,9 @@ function renderDock(){
   if(it && it.kind==="video"){
     $("sum").innerHTML=`<b>${vf} vídeo${vf===1?"":"s"} deste item</b><span>Gravados em tempo real: deixe esta tela aberta até terminar.</span>`;
     const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="makeVideos"; b.textContent=S.busy?"Gerando…":"Gerar vídeos"; b.disabled=S.busy||!vf; b.addEventListener("click",()=>makeVideos(it)); acts.appendChild(b);
+    const peca=S.items.find(i=>i.kind==="photo" && !i.example && backOf(i));
+    if(peca){ const m=document.createElement("button"); m.className="btn sec"; m.type="button"; m.id="goMontage"; m.textContent="Vídeo frente + costas"; m.disabled=S.busy;
+      m.addEventListener("click",()=>{ MONT.video=it.id; select(peca); setTimeout(()=>{ const c=document.querySelector(".mcard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },200); }); acts.appendChild(m); }
     const c=document.createElement("button"); c.className="btn sec"; c.type="button"; c.textContent="Salvar capa do Reels"; c.disabled=S.busy; c.addEventListener("click",()=>saveCover(it)); acts.appendChild(c);
   } else {
     $("sum").innerHTML=`<b>${n} ${n===1?"imagem":"imagens"} no pacote</b><span>${photos.length} foto${photos.length===1?"":"s"} × ${pf} formato${pf===1?"":"s"}${montageSource()?" · + vídeo frente, costas e vídeo":vids.length?" · vídeos são gerados ao abrir cada vídeo":""}</span>`;
