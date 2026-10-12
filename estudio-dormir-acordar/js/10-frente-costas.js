@@ -36,7 +36,7 @@ function drawPhotoPair(ctx,front,back,W,H,fmt,plan){
   const x0=Math.max(0,P.a.x0-W*.02), x1=Math.min(W,P.b.x1+W*.02), mid=(P.a.x1+P.b.x0)/2;
   for(const [it,c0,c1] of [[front,x0,mid],[back,mid,x1]]){
     const cw=c1-c0; ctx.save(); ctx.beginPath(); ctx.rect(c0,0,cw,H); ctx.clip(); ctx.translate(c0,0);
-    const reg = it.bbox ? {x0:cw*.04,x1:cw*.96,y0:(plan.box?plan.box.y0:H*.06)+P.lab, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96} : null;
+    const reg = it.bbox ? {x0:cw*.04,x1:cw*.96,y0:(plan.box?plan.box.y0:H*.06)+P.lab, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96, keepUp:!!fmt.vertical} : null;
     drawFit(ctx,it.src,it.w,it.h,cw,H,it.adj,it.bbox,reg); ctx.restore();
   }
   ctx.fillStyle="rgba(241,232,212,.9)"; ctx.fillRect(mid-Math.max(1,W*.002),0,Math.max(2,W*.004),H);
@@ -70,7 +70,7 @@ function renderFormat(ctx, W, H, item, fmt, t, endAt){
   } else if(back){
     drawPhotoPair(ctx,item,back,W,H,fmt,plan); tone="photo"; scrim(ctx,W,H,plan);
   } else {
-    const region = (item.bbox && plan.box && !fmt.forceScene) ? {x0:plan.box.x0, x1:plan.box.x1, y0:plan.box.y0, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96} : null;
+    const region = (item.bbox && plan.box && !fmt.forceScene) ? {x0:plan.box.x0, x1:plan.box.x1, y0:plan.box.y0, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96, keepUp:!!fmt.vertical} : null;
     drawFit(ctx,item.src,item.w,item.h,W,H,item.adj,item.bbox,region);
     scrim(ctx,W,H,plan);
     if(scene!=="original") warn = item.cutState==="error" ? "Sem recorte nesta foto: o fundo original foi mantido." : "Recortando a modelo para trocar o fundo…";

@@ -25,7 +25,7 @@ function drawFit(ctx, src, sw, sh, W, H, adj, bbox, region){
   const cover=Math.max(W/sw,H/sh);
   let s=cover, cx=sw/2, cy=sh/2, x, y;
   if(bbox && region){ // modelo encaixada inteira na área livre (fora do texto e da marca)
-    const cut=(bbox.y+bbox.h)>=sh*.985, rb = cut? H : region.y1;
+    const cut=(bbox.y+bbox.h)>=sh*.985, rb = cut && !region.keepUp ? H : region.y1;
     s=Math.min((region.x1-region.x0)/bbox.w, (rb-region.y0)/bbox.h)*(adj.size/100);
     x=(region.x0+region.x1)/2 - (bbox.x+bbox.w/2)*s; y=rb-(bbox.y+bbox.h)*s;
     if(y>0 && y+sh*s<H && !cut){ /* sobra espaço: mantém */ }
@@ -141,7 +141,8 @@ function planArt(W,H,fmt,isVideo){
       plan.text={x:xL, y: bottomText? yB-tb.h : yT+unit*.005, tb}; plan.textAt = bottomText? "bottom" : "top"; }
     const tBottom = plan.text && !bottomText ? plan.text.y+plan.text.tb.h : 0;
     const mBottom = plan.mark ? plan.mark.y+plan.mark.h : 0;
-    plan.box={x0:W*.06, x1:W*.94, y0:Math.max(H*.05, tBottom+gap, mBottom+gap)};
+    // 9:16: a modelo fica fora da coluna de botões do TikTok/Instagram (curtir, comentar, compartilhar) à direita
+    plan.box={x0:W*.06, x1: fmt.vertical ? W*(1-SAFE_V.icons-.01) : W*.94, y0:Math.max(H*.05, tBottom+gap, mBottom+gap)};
   } else {
     const colR=W*.44;
     if(textOn){
@@ -160,9 +161,10 @@ function planArt(W,H,fmt,isVideo){
 function subjectLayout(item, W, H, fmt, plan, sForce){
   const b=item.bbox, adj=item.adj;
   const cutAtBottom = (b.y+b.h) >= item.h*.985;
-  // nos formatos verticais os pés ficam acima da área da legenda e do carrinho do TikTok/Instagram
+  // nos formatos verticais o corpo inteiro fica acima da área da legenda e do carrinho do TikTok/Instagram,
+  // mesmo quando a foto termina colada nos pés (ou é de meio corpo: aí a borda de baixo é esfumada)
   const floorY = fmt.vertical ? H*(1-SAFE_V.b+.015) : H*(fmt.forceScene? .93 : .925);
-  const bottom0 = cutAtBottom ? H : floorY;
+  const bottom0 = cutAtBottom && !fmt.vertical ? H : floorY;
   let x0,x1,y0, availH, availW;
   if(fmt.forceScene){ const f=fmt.fill||.84; availH=H*f; availW=W*f; x0=0; x1=W; }
   else { const bx = (plan&&plan.box) || {x0:W*.08,x1:W*.92,y0:H*.08}; x0=bx.x0; x1=bx.x1; y0=bx.y0; availH=(bottom0-y0)*.98; availW=x1-x0; }
@@ -170,11 +172,23 @@ function subjectLayout(item, W, H, fmt, plan, sForce){
   const cx = (x0+x1)/2 + (adj.x/50)*W*(plan&&plan.pairSlot? .1 : .3);
   const bottom = bottom0 + (adj.y/50)*H*.3;
   const x = cx - (b.x + b.w/2)*s, y = bottom - (b.y+b.h)*s;
-  return { s, x, y, cutAtBottom, footX:cx, footY:bottom, fw:b.w*s };
+  // foto que termina nos pés mas mostra o corpo inteiro (bem mais alta que larga): pés firmes, com sombra no chão;
+  // só a de meio corpo ganha o esfumado embaixo
+  const fullBody = b.h/b.w >= 1.8, standUp = cutAtBottom && !!fmt.vertical && fullBody;
+  return { s, x, y, cutAtBottom: cutAtBottom && !standUp, fadeBottom: cutAtBottom && !!fmt.vertical && !fullBody, footX:cx, footY:bottom, fw:b.w*s };
 }
 function drawSubject(ctx, item, W, H, fmt, sceneId, plan, Lgiven){
   const L=Lgiven||subjectLayout(item,W,H,fmt,plan);
   const iw=item.cut.width*L.s, ih=item.cut.height*L.s;
+  if(L.fadeBottom){ // meio corpo no 9:16: some suavemente embaixo, em vez de terminar numa linha reta
+    const b=item.bbox, t=canvas(Math.max(1,Math.round(iw)),Math.max(1,Math.round(ih))), g=t.getContext("2d");
+    g.drawImage(item.cut,0,0,t.width,t.height);
+    const yb=(b.y+b.h)*L.s, f=Math.max(4,b.h*L.s*.12), gr=g.createLinearGradient(0,yb-f,0,yb);
+    gr.addColorStop(0,"rgba(0,0,0,0)"); gr.addColorStop(1,"rgba(0,0,0,1)");
+    g.globalCompositeOperation="destination-out"; g.fillStyle=gr; g.fillRect(0,yb-f,t.width,t.height-(yb-f));
+    ctx.save(); ctx.imageSmoothingQuality="high"; ctx.drawImage(t,L.x,L.y,iw,ih); ctx.restore();
+    return;
+  }
   if(!L.cutAtBottom){ // sombra de contato no chão
     ctx.save(); const rx=L.fw*.42, ry=Math.max(4,H*.012);
     const g=ctx.createRadialGradient(L.footX,L.footY,0,L.footX,L.footY,rx); g.addColorStop(0, sceneId==="white"?"rgba(36,37,63,.16)":"rgba(36,37,63,.24)"); g.addColorStop(1,"rgba(36,37,63,0)");

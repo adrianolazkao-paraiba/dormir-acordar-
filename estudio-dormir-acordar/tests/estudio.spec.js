@@ -103,6 +103,20 @@ test("recorte da modelo e frente e costas (precisa de tests/fixtures/modelo.jpg)
   await page.setInputFiles("#file", [MODELO, MODELO]);
   await expect.poll(() => page.evaluate(() => S.items.length === 2 && S.items.every(i => ["done", "error"].includes(i.cutState))), { timeout: 200_000 }).toBe(true);
   expect(await page.evaluate(() => S.items.map(i => i.cutState))).toEqual(["done", "done"]);
+
+  // 9:16: modelo inteira, entre o texto e a faixa de legenda, fora da coluna de botões da direita
+  const v = await page.evaluate(() => {
+    const it = S.items[0], fmt = FORMATS.find(f => f.id === "vertical"), W = fmt.w, H = fmt.h, out = [];
+    for (const layout of ["editorial", "etiqueta", "none"]) for (const mark of ["logo", "none"]) {
+      S.layout = layout; S.mark = mark;
+      const plan = planArt(W, H, fmt, false), L = subjectLayout(it, W, H, fmt, plan), b = it.bbox;
+      const topo = L.y + b.y * L.s, base = L.y + (b.y + b.h) * L.s, dir = L.x + (b.x + b.w) * L.s, esq = L.x + b.x * L.s;
+      const textoBase = plan.text ? plan.text.y + plan.text.tb.h : 0;
+      out.push(topo >= textoBase && topo >= 0 && base <= H * (1 - SAFE_V.b + .016) && esq >= 0 && dir <= W * (1 - SAFE_V.icons));
+    }
+    return out;
+  });
+  expect(v.every(Boolean)).toBe(true);
   await page.click(".item >> nth=0");
   await page.selectOption("#pairSel", { index: 1 });
   expect(await page.evaluate(() => !!backOf(S.items[0]))).toBe(true);
