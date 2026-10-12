@@ -34,17 +34,10 @@ async function makeVideos(it){
   const fmts=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)); if(!fmts.length) return;
   const mime=pickMime(); if(mime===null){ toast("Este navegador não grava vídeo. Use Chrome, Edge ou Safari atualizado."); return; }
   const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
-  stopPlayback(); S.busy=true; renderDock(); progress(0);
+  stopPlayback(); S.busy=true; renderDock(); renderMontage(); progress(0);
   const v=it.el; const res=$("results"); res.innerHTML="";
-  let audioTrack=null;
   try{
-    try{
-      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-      await audioCtx.resume();
-      if(!it.audioNode){ it.audioNode=audioCtx.createMediaElementSource(v); it.audioDest=audioCtx.createMediaStreamDestination(); it.audioGain=audioCtx.createGain(); it.audioNode.connect(it.audioDest); it.audioNode.connect(it.audioGain); it.audioGain.connect(audioCtx.destination); }
-      it.audioGain.gain.value=0;
-      audioTrack=it.audioDest.stream.getAudioTracks()[0]||null;
-    }catch(e){ audioTrack=null; }
+    const audioTrack=await videoAudioTrack(it);
     const start=it.trim||0;
     const jobs=fmts.map(fmt=>{
       const c=canvas(fmt.w,fmt.h), ctx=c.getContext("2d");
@@ -83,15 +76,25 @@ async function makeVideos(it){
     showResults(out, ext, /avc1|h264/i.test(jobs[0].rec.mimeType||mime));
   }catch(e){
     console.warn(e); toast("A gravação parou antes do fim. Deixe esta tela aberta e tente de novo.");
-  } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); drawPreviews(); }
+  } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); renderMontage(); drawPreviews(); }
 }
-function showResults(out, ext, h264){
-  const res=$("results"); res.innerHTML="";
+/* som do vídeo só para a gravação (o alto-falante fica mudo enquanto grava) */
+async function videoAudioTrack(it){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    await audioCtx.resume();
+    if(!it.audioNode){ it.audioNode=audioCtx.createMediaElementSource(it.el); it.audioDest=audioCtx.createMediaStreamDestination(); it.audioGain=audioCtx.createGain(); it.audioNode.connect(it.audioDest); it.audioNode.connect(it.audioGain); it.audioGain.connect(audioCtx.destination); }
+    it.audioGain.gain.value=0;
+    return it.audioDest.stream.getAudioTracks()[0]||null;
+  }catch(e){ return null; }
+}
+function showResults(out, ext, h264, box, title, zipTag){
+  const res=box||$("results"); res.innerHTML="";
   const h=document.createElement("div"); h.className="res";
   const warn = ext==="webm" ? " Este navegador não grava MP4. Para Instagram e TikTok, gere os vídeos no Chrome, Edge ou Safari." : (!h264 ? " Este navegador gravou em um formato que o Instagram pode recusar. Se der erro ao postar, gere no Chrome ou Safari atualizado." : "");
-  h.innerHTML=`<span><b>Vídeos prontos</b> · ${ext.toUpperCase()}.${warn}</span>`;
+  h.innerHTML=`<span><b>${title||"Vídeos prontos"}</b> · ${ext.toUpperCase()}.${warn}</span>`;
   const all=document.createElement("button"); all.className="btn sm"; all.type="button"; all.textContent="Baixar todos (.zip)";
-  all.addEventListener("click",async()=>{ if(!window.JSZip) await loadScript("vendor/jszip.min.js").catch(()=>{}); if(!window.JSZip){ toast("Use o botão de cada vídeo."); return; } const z=new JSZip(); out.forEach(o=>z.file(o.name,o.blob)); await saveFile(`dormir-acordar_${slug(S.P.name)}_videos.zip`, await z.generateAsync({type:"blob",compression:"STORE"})); });
+  all.addEventListener("click",async()=>{ if(!window.JSZip) await loadScript("vendor/jszip.min.js").catch(()=>{}); if(!window.JSZip){ toast("Use o botão de cada vídeo."); return; } const z=new JSZip(); out.forEach(o=>z.file(o.name,o.blob)); await saveFile(`dormir-acordar_${slug(S.P.name)}_${zipTag||"videos"}.zip`, await z.generateAsync({type:"blob",compression:"STORE"})); });
   h.appendChild(all); res.appendChild(h);
   for(const o of out){
     const r=document.createElement("div"); r.className="res";

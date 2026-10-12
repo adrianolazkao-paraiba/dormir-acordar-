@@ -116,6 +116,19 @@
       <div class="grid" id="grid"></div>
       <div class="results" id="results"></div>
 
+      <section class="montage" id="montage" hidden aria-labelledby="mH">
+        <div class="stage-h"><h2 id="mH">Montagem: vídeo + frente + costas</h2></div>
+        <p class="hint" id="mHint">Um vídeo só: abre com o seu vídeo e termina com a foto de frente e a de costas da peça (3 s cada), com o mesmo cenário, marca e estilo de texto.</p>
+        <div class="row2" id="mPick">
+          <div class="field"><label for="mFront">Foto de frente</label><select id="mFront"></select></div>
+          <div class="field"><label for="mBack">Foto de costas</label><select id="mBack"></select></div>
+        </div>
+        <div class="mboard" id="mBoard"></div>
+        <p class="hint" id="mInfo"></p>
+        <div><button class="btn" type="button" id="makeMontage">Gerar montagem</button></div>
+        <div class="results" id="mResults"></div>
+      </section>
+
 
     </section>
   </div>
@@ -162,6 +175,7 @@
 <script src="js/12-interface.js"></script>
 <script src="js/13-exportacao.js"></script>
 <script src="js/14-video.js"></script>
+<script src="js/14b-montagem.js"></script>
 <script src="js/15-ja-feitos.js"></script>
 <script src="js/16-legendas.js"></script>
 <script src="js/17-eventos.js"></script>

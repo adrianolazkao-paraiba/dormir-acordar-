@@ -1,7 +1,7 @@
 // Monta a versão para publicar no claude.ai: um único HTML com o CSS e os scripts de js/ embutidos,
 // na mesma ordem do index.html. vendor/, model/ e assets/ continuam como arquivos ao lado.
 // Uso: npm run build:claude   →   dist/estudio-dormir-acordar.html
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 
 const raiz = new URL(".", import.meta.url);
 const ler = p => readFileSync(new URL(p, raiz), "utf8");
@@ -17,7 +17,8 @@ html = html.replace(/<script src="(js\/[^"]+)"><\/script>/g, (_, p) => {
   if (/<\/script/i.test(js)) throw new Error(`${p} contém </script> e quebraria o HTML`);
   n++; return `<script>\n${js}\n</script>`;
 });
-if (n !== 19) throw new Error(`esperava 19 scripts em js/, achei ${n}`);
+const esperado = readdirSync(new URL("js/", raiz)).filter(f => f.endsWith(".js")).length;
+if (n !== esperado) throw new Error(`a pasta js/ tem ${esperado} arquivos, mas o index.html carrega ${n}`);
 
 mkdirSync(new URL("dist/", raiz), { recursive: true });
 writeFileSync(new URL("dist/estudio-dormir-acordar.html", raiz), html);

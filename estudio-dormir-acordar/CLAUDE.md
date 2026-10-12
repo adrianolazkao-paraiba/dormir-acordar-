@@ -42,7 +42,9 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   - `07-exemplo.js` pijama ilustrado de exemplo · `08-recorte.js` recorte da modelo com ONNX (ISNet) no navegador
   - `09-composicao.js` plano da arte (espaço do texto, da marca e da modelo), monograma D&A, renderização de cada formato
   - `10-frente-costas.js` · `11-itens.js` · `12-interface.js` · `13-exportacao.js` (JPG/.zip)
-  - `14-video.js` gravação de vídeo com MediaRecorder · `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
+  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` montagem no modo vídeo: vídeo → foto de frente → foto de costas
+    (3 s cada, zoom lento, transição de 0,4 s) → cartão; grava um formato por vez (3 ao mesmo tempo engasga o celular) ·
+    `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
 - `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
   Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
 - `vendor/` — onnxruntime-web 1.20.1 e JSZip 3.10.1 (cópias locais, funciona offline).
@@ -57,7 +59,9 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
 - **Vertical 9:16:** texto, preço e marca fora das áreas cobertas pela interface do TikTok/Instagram
   (`SAFE_V`); os pés ficam acima da faixa de legenda e carrinho.
 - **Fotos principais do TikTok Shop e dos marketplaces:** fundo branco, sem texto, sem logo, sem marca d'água.
-- **Vídeo do TikTok Shop:** no máximo 15 s.
+- **Vídeo do TikTok Shop:** no máximo 15 s (na montagem, a parte do vídeo é encurtada para caber).
+- **Montagem (modo vídeo):** ordem escolhida pelo dono: vídeo → frente → costas, 3 s por foto; o estilo de texto
+  (Editorial, Etiqueta, Sem texto), o cenário e a marca valem igual às fotos.
 - **Cenário da marca:** igual ao logo (azul-noite liso, estrelas de 4 pontas e pontos, horizonte curvo em areia).
 - O dono preferiu os **cenários desenhados** às fotos geradas por IA; não troque sem ele pedir.
 - **Marcas disponíveis:** logo original, D&A com círculo, D&A sem círculo, marca d'água com e sem círculo, nenhuma.

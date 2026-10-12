@@ -43,8 +43,11 @@ function drawPhotoPair(ctx,front,back,W,H,fmt,plan){
   drawPairLabels(ctx,P,"photo",(plan.box?plan.box.y0:H*.06)+P.lab*.6,(plan.box?plan.box.y0:H*.06)+P.lab*.6);
 }
 
-/* Desenha um formato inteiro. t/endAt só valem para vídeo. */
-function renderFormat(ctx, W, H, item, fmt, t, endAt){
+/* Desenha um formato inteiro. t/endAt só valem para vídeo.
+   opt (só fotos): part "base" = cenário e modelo, "overlay" = só texto e marca (a montagem anima a base
+   e mantém o texto parado); single = ignora a foto de costas ligada a esta. */
+function renderFormat(ctx, W, H, item, fmt, t, endAt, opt){
+  opt=opt||{};
   ctx.save(); ctx.clearRect(0,0,W,H);
   const plan=planArt(W,H,fmt,item.kind==="video");
   let tone="photo", warn=null;
@@ -59,24 +62,30 @@ function renderFormat(ctx, W, H, item, fmt, t, endAt){
     ctx.restore(); return null;
   }
   const scene = fmt.forceScene || S.scene;
-  const back = backOf(item);
-  if(scene!=="original" && item.cut){
-    ctx.drawImage(sceneCanvas(scene,W,H),0,0); tone=sceneTone(scene);
-    if(scene==="night") clearSky(ctx,plan);
-    if(back && back.cut) drawSubjectPair(ctx,item,back,W,H,fmt,scene,plan,scene==="custom"?"photo":tone);
-    else { drawSubject(ctx,item,W,H,fmt,scene,plan); if(back) warn="Recortando a foto de costas…"; }
-    if(scene==="custom"){ tone="photo"; scrim(ctx,W,H,plan); }
-    else if(scenePhotoOk(scene)) lightVeil(ctx,W,H,plan);
-  } else if(back){
-    drawPhotoPair(ctx,item,back,W,H,fmt,plan); tone="photo"; scrim(ctx,W,H,plan);
-  } else {
-    const region = (item.bbox && plan.box && !fmt.forceScene) ? {x0:plan.box.x0, x1:plan.box.x1, y0:plan.box.y0, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96, keepUp:!!fmt.vertical} : null;
-    drawFit(ctx,item.src,item.w,item.h,W,H,item.adj,item.bbox,region);
-    scrim(ctx,W,H,plan);
-    if(scene!=="original") warn = item.cutState==="error" ? "Sem recorte nesta foto: o fundo original foi mantido." : "Recortando a modelo para trocar o fundo…";
+  const back = opt.single ? null : backOf(item);
+  const cutScene = scene!=="original" && item.cut;
+  tone = cutScene && scene!=="custom" ? sceneTone(scene) : "photo";
+  if(opt.part!=="overlay"){
+    if(cutScene){
+      ctx.drawImage(sceneCanvas(scene,W,H),0,0);
+      if(scene==="night") clearSky(ctx,plan);
+      if(back && back.cut) drawSubjectPair(ctx,item,back,W,H,fmt,scene,plan,tone);
+      else { drawSubject(ctx,item,W,H,fmt,scene,plan); if(back) warn="Recortando a foto de costas…"; }
+      if(scene==="custom") scrim(ctx,W,H,plan);
+      else if(scenePhotoOk(scene)) lightVeil(ctx,W,H,plan);
+    } else if(back){
+      drawPhotoPair(ctx,item,back,W,H,fmt,plan); scrim(ctx,W,H,plan);
+    } else {
+      const region = (item.bbox && plan.box && !fmt.forceScene) ? {x0:plan.box.x0, x1:plan.box.x1, y0:plan.box.y0, y1: fmt.vertical? H*(1-SAFE_V.b+.015) : H*.96, keepUp:!!fmt.vertical} : null;
+      drawFit(ctx,item.src,item.w,item.h,W,H,item.adj,item.bbox,region);
+      scrim(ctx,W,H,plan);
+      if(scene!=="original") warn = item.cutState==="error" ? "Sem recorte nesta foto: o fundo original foi mantido." : "Recortando a modelo para trocar o fundo…";
+    }
   }
-  if(plan.text) plan.text.tb.draw(ctx,plan.text.x,plan.text.y,tone,1);
-  drawMark(ctx,W,plan,tone,1);
+  if(opt.part!=="base"){
+    if(plan.text) plan.text.tb.draw(ctx,plan.text.x,plan.text.y,tone,1);
+    drawMark(ctx,W,plan,tone,1);
+  }
   ctx.restore();
   return warn;
 }

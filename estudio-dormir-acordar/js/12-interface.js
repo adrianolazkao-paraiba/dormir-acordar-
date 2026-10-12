@@ -21,7 +21,8 @@ function renderItems(){
     else drawCover(g,it.src,it.w,it.h,128,160,newAdj(),false);
     b.appendChild(th);
     const tag=document.createElement("span"); tag.className="tag";
-    tag.textContent= it.example?"Exemplo": it.kind==="video"? fmtTime(it.dur)+" s" : backOf(it)? "F + C" : isBackOfAnother(it)? "Costas" : "Foto "+(photoNumber(it)); b.appendChild(tag);
+    const mp = S.sel&&S.sel.kind==="video" ? montagePhotos() : null;
+    tag.textContent= it.example?"Exemplo": mp&&mp.front===it? "Frente" : mp&&mp.back===it? "Costas" : it.kind==="video"? fmtTime(it.dur)+" s" : backOf(it)? "F + C" : isBackOfAnother(it)? "Costas" : "Foto "+(photoNumber(it)); b.appendChild(tag);
     if(it.cutState==="working"||it.cutState==="queued"){ const st=document.createElement("span"); st.className="st"; st.textContent=it.cutState==="working"?"Recortando":"Na fila"; b.appendChild(st); }
     if(!it.example){ const x=document.createElement("span"); x.className="x"; x.textContent="×"; x.setAttribute("role","button"); x.setAttribute("aria-label","Remover "+it.name);
       x.addEventListener("click",e=>{ e.stopPropagation(); removeItem(it); }); b.appendChild(x); }
@@ -31,7 +32,8 @@ function renderItems(){
   const ph=S.items.filter(i=>i.kind==="photo"&&!i.example).length, vd=S.items.filter(i=>i.kind==="video").length;
   $("itemHint").innerHTML = S.items[0]&&S.items[0].example
     ? "Mostrando um <strong>exemplo ilustrado</strong>. Envie suas fotos e vídeos para trocar."
-    : `<strong>${ph}</strong> foto${ph===1?"":"s"} e <strong>${vd}</strong> vídeo${vd===1?"":"s"}. Toque em um item para ver e ajustar.`;
+    : `<strong>${ph}</strong> foto${ph===1?"":"s"} e <strong>${vd}</strong> vídeo${vd===1?"":"s"}. Toque em um item para ver e ajustar.`
+      + (ph&&vd ? " Toque no vídeo para montar <strong>vídeo + frente + costas</strong>." : "");
 }
 function renderScenesThumbs(){
   for(const cv of document.querySelectorAll('#scenes canvas[data-scene]')){ const id=cv.dataset.scene, p=photoImgs[id]; if(p&&p.ok){ const g=cv.getContext("2d"); g.clearRect(0,0,120,150); g.drawImage(sceneCanvas(id,120,150),0,0); } }
@@ -87,7 +89,7 @@ function renderGrid(){
     const note=document.createElement("p"); note.className="note"; note.textContent=fmt.note||"";
     const foot=document.createElement("div"); foot.className="foot";
     const inc=document.createElement("label"); inc.className="check"; const cb=document.createElement("input"); cb.type="checkbox"; cb.id="inc-"+fmt.id; cb.checked=S.include.has(fmt.id);
-    cb.addEventListener("change",()=>{ cb.checked?S.include.add(fmt.id):S.include.delete(fmt.id); if(needsCut()) S.items.forEach(queueCut); renderDock(); });
+    cb.addEventListener("change",()=>{ cb.checked?S.include.add(fmt.id):S.include.delete(fmt.id); if(needsCut()) S.items.forEach(queueCut); renderDock(); renderMontage(); });
     inc.append(cb,document.createTextNode(" No pacote"));
     foot.appendChild(inc);
     if(it.kind==="photo"){ const dl=document.createElement("button"); dl.type="button"; dl.className="btn ghost sm"; dl.textContent="Baixar"; dl.addEventListener("click",()=>downloadOne(it,fmt)); foot.appendChild(dl); }
@@ -110,7 +112,7 @@ function drawZones(el,fmt){
   }
 }
 let rafPending=false;
-function schedule(){ if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{ rafPending=false; drawPreviews(); }); }
+function schedule(){ MONT.boardDirty=true; if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{ rafPending=false; drawPreviews(); }); }
 function drawPreviews(){
   const it=S.sel; if(!it) return;
   const dpr=Math.min(2,window.devicePixelRatio||1);
@@ -122,6 +124,7 @@ function drawPreviews(){
     const msg=renderFormat(cv.getContext("2d"),w,h,it,fmt,t,endAt);
     warn.hidden=!msg; if(msg) warn.textContent=msg;
   }
+  if(it.kind==="video") drawMontageBoard(t);
 }
 function renderDock(){
   const it=S.sel, acts=$("dockActs"); acts.innerHTML="";
@@ -132,10 +135,11 @@ function renderDock(){
   if(it && it.kind==="video"){
     $("sum").innerHTML=`<b>${vf} vídeo${vf===1?"":"s"} deste item</b><span>Gravados em tempo real: deixe esta tela aberta até terminar.</span>`;
     const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="makeVideos"; b.textContent=S.busy?"Gerando…":"Gerar vídeos"; b.disabled=S.busy||!vf; b.addEventListener("click",()=>makeVideos(it)); acts.appendChild(b);
+    if(montagePhotos().front){ const m=document.createElement("button"); m.className="btn sec"; m.type="button"; m.textContent="Gerar montagem"; m.disabled=S.busy||!vf; m.addEventListener("click",()=>{ $("montage").scrollIntoView({behavior:"smooth",block:"start"}); makeMontage(it); }); acts.appendChild(m); }
     const c=document.createElement("button"); c.className="btn sec"; c.type="button"; c.textContent="Salvar capa do Reels"; c.disabled=S.busy; c.addEventListener("click",()=>saveCover(it)); acts.appendChild(c);
   } else {
     $("sum").innerHTML=`<b>${n} ${n===1?"imagem":"imagens"} no pacote</b><span>${photos.length} foto${photos.length===1?"":"s"} × ${pf} formato${pf===1?"":"s"}${vids.length?" · vídeos são gerados ao abrir cada vídeo":""}</span>`;
     const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="zipAll"; b.textContent=S.busy?"Preparando…":"Baixar tudo (.zip)"; b.disabled=S.busy||!n; b.addEventListener("click",zipPhotos); acts.appendChild(b);
   }
 }
-function renderAll(){ renderItems(); renderPair(); renderScenes(); syncAdj(); renderGrid(); renderDock(); renderPlayIcon(); schedule(); }
+function renderAll(){ renderItems(); renderPair(); renderScenes(); syncAdj(); renderGrid(); renderDock(); renderMontage(); renderPlayIcon(); schedule(); }

@@ -85,6 +85,33 @@ test("vídeo: prévia, 3 formatos e gravação", async ({ page }) => {
   await expect(page.locator(".res .btn.ghost")).toHaveCount(3);
 });
 
+test("montagem: vídeo + frente + costas nos 3 formatos", async ({ page }) => {
+  // duas fotos (frente e costas) e o vídeo; sem cenário para não depender do recorte
+  await page.click('.scene[data-id="original"]');
+  await page.evaluate(() => { for (const id of ["tts-main", "mkt"]) S.include.delete(id); });
+  await page.setInputFiles("#file", { name: "frente.png", mimeType: "image/png", buffer: Buffer.from(await page.evaluate(() => { const c = canvas(400, 600), g = c.getContext("2d"); g.fillStyle = "#c33"; g.fillRect(0, 0, 400, 600); return c.toDataURL("image/png").split(",")[1]; }), "base64") });
+  await page.setInputFiles("#file", { name: "costas.png", mimeType: "image/png", buffer: Buffer.from(await page.evaluate(() => { const c = canvas(400, 600), g = c.getContext("2d"); g.fillStyle = "#33c"; g.fillRect(0, 0, 400, 600); return c.toDataURL("image/png").split(",")[1]; }), "base64") });
+  await expect(page.locator("#montage")).toBeHidden(); // só aparece no modo vídeo
+  await page.setInputFiles("#file", FIX + "video-teste.webm");
+  await expect(page.locator("#montage")).toBeVisible();
+  await expect(page.locator("#items .tag", { hasText: /frente/i })).toHaveCount(1);
+  await expect(page.locator("#items .tag", { hasText: /costas/i })).toHaveCount(1);
+  await expect(page.locator("#mBoard canvas")).toHaveCount(3);
+  const plano = await page.evaluate(() => FORMATS.filter(f => f.media.includes("video")).map(f => montagePlan(S.sel, f)));
+  expect(plano.every(p => p.segs.filter(s => s.k === "photo").length === 2)).toBe(true);
+  const tts = await page.evaluate(() => { const it = S.sel, d = it.dur; it.dur = 40; const p = montagePlan(it, FORMATS.find(f => f.id === "tts-video")); it.dur = d; return p.total; });
+  expect(tts).toBeLessThanOrEqual(15); // TikTok Shop nunca passa de 15 s
+  await page.selectOption("#mBack", "none");
+  await expect(page.locator("#mBoard canvas")).toHaveCount(2);
+  await page.selectOption("#mBack", { index: 1 });
+  await page.click("#makeMontage");
+  await expect(page.locator("#mResults .res", { hasText: "Montagem pronta" })).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator("#mResults .res .btn.ghost")).toHaveCount(3);
+  const d = page.waitForEvent("download");
+  await page.locator("#mResults .res .btn.ghost").first().click();
+  expect((await d).suggestedFilename()).toMatch(/_montagem_feed\.(mp4|webm)$/);
+});
+
 test("arquivo quebrado avisa e não entra na lista", async ({ page }) => {
   await page.setInputFiles("#file", { name: "quebrado.jpg", mimeType: "image/jpeg", buffer: Buffer.from("não é imagem") });
   await expect(page.locator("#toast")).toContainText("Não consegui abrir");
