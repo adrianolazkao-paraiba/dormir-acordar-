@@ -240,7 +240,7 @@ function buildVideoPanel(host){
     <div class="vp-side">
       <section class="vp-block"><h3>Ajustes</h3>
         <div class="range"><label for="vpTrim">Começar em</label><input id="vpTrim" type="range" min="0" step="0.1"><output id="vpTrimOut"></output></div>
-        <div class="field"><span class="lbl" id="vpPosL">Texto no vídeo</span><div class="seg" id="vpPos" role="radiogroup" aria-labelledby="vpPosL"><button type="button" data-v="top">No topo</button><button type="button" data-v="bottom">Embaixo</button></div></div>
+        <div class="field"><span class="lbl" id="vpPosL">Texto no vídeo</span><div class="seg" id="vpPos" role="radiogroup" aria-labelledby="vpPosL"><button type="button" data-v="bottom">Embaixo</button><button type="button" data-v="top">No topo</button></div></div>
         <label class="check"><input id="vpEnd" type="checkbox"> Terminar com o cartão da marca</label>
       </section>
       <section class="vp-block"><h3>O que gerar</h3><div class="vp-outs"></div></section>

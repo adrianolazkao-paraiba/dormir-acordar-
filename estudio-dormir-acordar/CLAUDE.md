@@ -75,8 +75,9 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   cartão), lista "O que gerar" (Montagem 9:16 e 4:5; Só o vídeo Feed, Reels, TikTok Shop ≤15 s) e um botão principal.
   O pacote .zip leva as 3 versões de cada peça (frente, frente-e-costas, costas).
 - **Abaixo da prévia do vídeo:** Estilo do texto (Editorial, Etiqueta, Sem texto) e Marca, sincronizados com a lateral.
-- **Vídeo com "Texto embaixo":** texto e logo descem juntos. No 9:16 o logo fica à esquerda, acima do texto, e nada entra
-  na coluna de botões do TikTok/Instagram; no 4:5 o logo fica embaixo à direita, alinhado ao texto.
+- **Vídeo: dizeres e logo embaixo por padrão** (o dono reclamou do texto no rosto da modelo). Texto e logo numa faixa só
+  no pé do vídeo, logo lado a lado alinhado pela base; no 9:16 a faixa fica acima da área de legenda e antes da coluna de
+  botões do TikTok/Instagram. "No topo" continua como opção. As fotos não mudam (texto em cima, aprovado pelo dono).
 - **Cenário da marca:** igual ao logo (azul-noite liso, estrelas de 4 pontas e pontos, horizonte curvo em areia).
 - O dono preferiu os **cenários desenhados** às fotos geradas por IA; não troque sem ele pedir.
 - **Marcas disponíveis:** logo original, D&A com círculo, D&A sem círculo, marca d'água com e sem círculo, nenhuma.

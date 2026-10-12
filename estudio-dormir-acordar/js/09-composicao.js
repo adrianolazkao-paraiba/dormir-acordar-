@@ -137,15 +137,14 @@ function planArt(W,H,fmt,isVideo){
   const plan={mode,unit,textOn,mark:null,text:null,box:null,textAt:"top"};
   const bottomText = isVideo && S.vidPos==="bottom";
   if(mode==="stack"){
-    // vídeo com "Texto embaixo": texto e logo descem juntos. No 9:16 o canto de baixo à direita fica sob os botões
-    // do TikTok/Instagram, então lá o texto não entra nessa coluna e o logo fica à esquerda, logo acima do texto.
-    const vb = bottomText && !!fmt.vertical;
-    if(textOn){ const width=(ms && !vb ? xR-ms.w-gap : vb ? W*(1-SAFE_V.icons-.01) : xR)-xL; const tb=textBlock(width,unit,mode);
+    // vídeo com "Texto embaixo" (padrão): texto e logo numa faixa só, no pé da tela, longe do rosto da modelo.
+    // No 9:16 a faixa termina antes da coluna de botões do TikTok/Instagram (curtir, comentar, compartilhar).
+    const vb = bottomText && !!fmt.vertical, xRb = vb ? W*(1-SAFE_V.icons-.01) : xR;
+    if(textOn){ const width=(ms ? xRb-ms.w-gap : xRb)-xL; const tb=textBlock(width,unit,mode);
       plan.text={x:xL, y: bottomText? yB-tb.h : yT+unit*.005, tb}; plan.textAt = bottomText? "bottom" : "top"; }
     if(ms){
       if(!bottomText) plan.mark={x:xR-ms.w, y:yT, w:ms.w, h:ms.h};
-      else if(vb) plan.mark={x:xL, y:(plan.text? plan.text.y-gap*.6 : yB)-ms.h, w:ms.w, h:ms.h};
-      else plan.mark={x:xR-ms.w, y:yB-ms.h, w:ms.w, h:ms.h};
+      else plan.mark={x:xRb-ms.w, y:yB-ms.h, w:ms.w, h:ms.h}; // ao lado do texto, alinhado pela base
     }
     const tBottom = plan.text && !bottomText ? plan.text.y+plan.text.tb.h : 0;
     const mBottom = plan.mark && !bottomText ? plan.mark.y+plan.mark.h : 0;

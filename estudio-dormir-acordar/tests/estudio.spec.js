@@ -137,7 +137,10 @@ test("barra Frente | Frente e costas | Costas e painel Vídeo da peça", async (
   expect(nomes[1]).toMatch(/_video-01_feed\.(mp4|webm)$/);
 });
 
-test("vídeo com texto embaixo: texto e logo descem juntos, fora das áreas do app", async ({ page }) => {
+test("vídeo: dizeres e logo embaixo por padrão, numa faixa só, fora das áreas do app; fotos não mudam", async ({ page }) => {
+  expect(await page.evaluate(() => S.vidPos)).toBe("bottom"); // padrão: embaixo, longe do rosto da modelo
+  // nas fotos o texto continua em cima
+  expect(await page.evaluate(() => FORMATS.filter(f => f.text).every(f => planArt(f.w, f.h, f, false).text.y < f.h * .2))).toBe(true);
   const r = await page.evaluate(() => {
     const prob = [];
     S.vidPos = "bottom";
@@ -145,7 +148,7 @@ test("vídeo com texto embaixo: texto e logo descem juntos, fora das áreas do a
       S.layout = lay; S.mark = mk; const f = FORMATS.find(x => x.id === id), W = f.w, H = f.h, plan = planArt(W, H, f, true);
       const caixas = [plan.text && [plan.text.x, plan.text.y, plan.text.tb.w, plan.text.tb.h], plan.mark && [plan.mark.x, plan.mark.y, plan.mark.w, plan.mark.h]].filter(Boolean);
       for (const [x, y, w, h] of caixas) {
-        if (y < H * .45) prob.push(`${id}/${lay}/${mk}: não desceu`);
+        if (y < H * (f.vertical ? .55 : .6)) prob.push(`${id}/${lay}/${mk}: subiu demais (pode cobrir o rosto)`);
         if (y + h > (f.vertical ? H * (1 - SAFE_V.b) : H) + 1) prob.push(`${id}/${lay}/${mk}: na faixa de legenda`);
         if (f.vertical && x + w > W * (1 - SAFE_V.icons) + 1) prob.push(`${id}/${lay}/${mk}: nos botões da direita`);
       }
