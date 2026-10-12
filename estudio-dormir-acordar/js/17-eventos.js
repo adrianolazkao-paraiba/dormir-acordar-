@@ -36,8 +36,13 @@ function bind(){
 function renderMarkChips(){
   for(const b of $("markSeg").children){
     const on=b.dataset.v===S.mark; b.classList.toggle("on",on); b.setAttribute("role","radio"); b.setAttribute("aria-checked",on);
-    const cv=b.querySelector("canvas"), g=cv.getContext("2d"); g.clearRect(0,0,120,150); g.drawImage(sceneCanvas("studio",120,150),0,0);
-    const v=b.dataset.v;
+    paintMarkChip(b.querySelector("canvas"), b.dataset.v);
+  }
+  syncPanelLook();
+}
+/* miniatura de uma opção de marca (usada na lateral e no painel de vídeo) */
+function paintMarkChip(cv, v){
+  { const g=cv.getContext("2d"); g.clearRect(0,0,120,150); g.drawImage(sceneCanvas("studio",120,150),0,0);
     if(v==="logo"){ if(logoImg.naturalWidth){ const w=84,h=w*logoImg.naturalHeight/logoImg.naturalWidth; g.save(); roundRect(g,18,(150-h)/2,w,h,8); g.clip(); g.drawImage(logoImg,18,(150-h)/2,w,h); g.restore(); } }
     else if(v==="mono") drawMonogram(g,22,37,76,"mono","light");
     else if(v==="wm") drawMonogram(g,22,37,76,"wm","light");

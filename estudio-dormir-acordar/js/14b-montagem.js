@@ -188,7 +188,7 @@ function videoPanel(){
   // ajustes
   e.trim.max=Math.max(0,vid.dur-1).toFixed(1); e.trim.value=vid.trim||0; e.trimOut.textContent=fmtTime(vid.trim||0)+" s";
   for(const b of e.pos.children){ const on=b.dataset.v===S.vidPos; b.classList.toggle("on",on); b.setAttribute("aria-checked",on); }
-  e.end.checked=S.endCard;
+  e.end.checked=S.endCard; syncPanelLook();
   // o que gerar
   e.outs.innerHTML="";
   for(const [g,titulo,desc] of [["m","Montagem","Frente, costas e o vídeo"],["c","Só o vídeo","O seu vídeo com texto e marca"]]){
@@ -222,6 +222,19 @@ function buildVideoPanel(host){
       <div class="seg vp-fmt" role="radiogroup" aria-label="Formato da prévia"><button type="button" data-v="vertical">9:16</button><button type="button" data-v="feed">4:5</button></div>
       <div class="vp-screen"><canvas></canvas><button type="button" class="vp-play" aria-label="Ver prévia"></button></div>
       <div class="vp-tl" aria-label="Linha do tempo"></div>
+      <div class="vp-look">
+        <div class="field"><span class="lbl" id="vpLayL">Estilo do texto</span>
+          <div class="seg" id="vpLayout" role="radiogroup" aria-labelledby="vpLayL"><button type="button" data-v="editorial">Editorial</button><button type="button" data-v="etiqueta">Etiqueta</button><button type="button" data-v="none">Sem texto</button></div></div>
+        <div class="field"><span class="lbl" id="vpMarkL">Marca</span>
+          <div class="vp-marks" id="vpMark" role="radiogroup" aria-labelledby="vpMarkL">
+            <button type="button" data-v="logo"><canvas width="120" height="150"></canvas><span>Logo</span></button>
+            <button type="button" data-v="mono"><canvas width="120" height="150"></canvas><span>D&amp;A com círculo</span></button>
+            <button type="button" data-v="word"><canvas width="120" height="150"></canvas><span>D&amp;A</span></button>
+            <button type="button" data-v="wm"><canvas width="120" height="150"></canvas><span>Marca d’água com círculo</span></button>
+            <button type="button" data-v="wmword"><canvas width="120" height="150"></canvas><span>Marca d’água</span></button>
+            <button type="button" data-v="none"><canvas width="120" height="150"></canvas><span>Sem marca</span></button>
+          </div></div>
+      </div>
       <p class="hint vp-tip">Prévia sem som. O vídeo final sai com o som do seu vídeo.</p>
     </div>
     <div class="vp-side">
@@ -249,6 +262,11 @@ function buildVideoPanel(host){
   for(const b of e.pos.children) b.addEventListener("click",()=>{ S.vidPos=b.dataset.v; savePrefs(); renderSegs(); videoPanel(); });
   e.end.addEventListener("change",()=>{ S.endCard=e.end.checked; $("endCard").checked=S.endCard; savePrefs(); videoPanel(); });
   e.gen.addEventListener("click",generateFromPanel);
+  // estilo do texto e marca, logo abaixo da prévia (os mesmos da lateral, valem para fotos e vídeos)
+  e.layout=q("#vpLayout"); e.marks=q("#vpMark");
+  for(const b of e.layout.children) b.addEventListener("click",()=>{ S.layout=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
+  for(const b of e.marks.children) b.addEventListener("click",()=>{ S.mark=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
+  for(const b of e.marks.children) paintMarkChip(b.querySelector("canvas"), b.dataset.v);
   e.cover.addEventListener("click",()=>{ const src=montageSource(); if(src) saveCover(src.vid); });
 }
 function panelUI(){
@@ -294,4 +312,14 @@ async function togglePreview(){
 function stopPreview(){
   const t=MONT.preview; if(!t) return Promise.resolve();
   t.stop=true; MONT.preview=null; renderPlayGlyph(false); return t.done || Promise.resolve();
+}
+
+/* marca e estilo do texto do painel acompanham a lateral */
+function syncPanelLook(){
+  const e=VP.el; if(!e || !e.layout) return;
+  if(!e.marksLogo && logoImg.naturalWidth){ e.marksLogo=true; for(const b of e.marks.children) paintMarkChip(b.querySelector("canvas"), b.dataset.v); }
+  for(const b of e.layout.children){ const on=b.dataset.v===S.layout; b.classList.toggle("on",on); b.setAttribute("aria-checked",on); }
+  for(const b of e.marks.children){ const on=b.dataset.v===S.mark; b.classList.toggle("on",on); b.setAttribute("aria-checked",on); }
+  for(const b of e.pos.children){ const on=b.dataset.v===S.vidPos; b.classList.toggle("on",on); b.setAttribute("aria-checked",on); }
+  if(!MONT.preview) drawVideoStill();
 }

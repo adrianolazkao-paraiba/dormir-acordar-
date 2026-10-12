@@ -137,6 +137,25 @@ test("barra Frente | Frente e costas | Costas e painel Vídeo da peça", async (
   expect(nomes[1]).toMatch(/_video-01_feed\.(mp4|webm)$/);
 });
 
+test("vídeo com texto embaixo: texto e logo descem juntos, fora das áreas do app", async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const prob = [];
+    S.vidPos = "bottom";
+    for (const id of ["vertical", "feed", "tts-video"]) for (const lay of ["editorial", "etiqueta", "none"]) for (const mk of ["logo", "mono", "none"]) {
+      S.layout = lay; S.mark = mk; const f = FORMATS.find(x => x.id === id), W = f.w, H = f.h, plan = planArt(W, H, f, true);
+      const caixas = [plan.text && [plan.text.x, plan.text.y, plan.text.tb.w, plan.text.tb.h], plan.mark && [plan.mark.x, plan.mark.y, plan.mark.w, plan.mark.h]].filter(Boolean);
+      for (const [x, y, w, h] of caixas) {
+        if (y < H * .45) prob.push(`${id}/${lay}/${mk}: não desceu`);
+        if (y + h > (f.vertical ? H * (1 - SAFE_V.b) : H) + 1) prob.push(`${id}/${lay}/${mk}: na faixa de legenda`);
+        if (f.vertical && x + w > W * (1 - SAFE_V.icons) + 1) prob.push(`${id}/${lay}/${mk}: nos botões da direita`);
+      }
+      if (plan.text && plan.mark) { const t = plan.text, m = plan.mark; if (!(m.x >= t.x + t.tb.w || m.x + m.w <= t.x || m.y >= t.y + t.tb.h || m.y + m.h <= t.y)) prob.push(`${id}/${lay}/${mk}: logo em cima do texto`); }
+    }
+    return prob;
+  });
+  expect(r).toEqual([]);
+});
+
 test("MP4 padrão para WhatsApp: MP4 fragmentado vira MP4 inteiro H.264 + AAC", async ({ page }) => {
   // o navegador grava MP4 fragmentado (o WhatsApp recusa como "formato incomum"); o estúdio reorganiza o arquivo
   const r = await page.evaluate(async () => {
