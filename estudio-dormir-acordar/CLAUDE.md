@@ -42,8 +42,8 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   - `07-exemplo.js` pijama ilustrado de exemplo · `08-recorte.js` recorte da modelo com ONNX (ISNet) no navegador
   - `09-composicao.js` plano da arte (espaço do texto, da marca e da modelo), monograma D&A, renderização de cada formato
   - `10-frente-costas.js` · `11-itens.js` · `12-interface.js` · `13-exportacao.js` (JPG/.zip)
-  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` montagem no modo vídeo: vídeo → foto de frente → foto de costas
-    (3 s cada, zoom lento, transição de 0,4 s) → cartão; grava um formato por vez (3 ao mesmo tempo engasga o celular) ·
+  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` 7º espaço na tela das fotos: vídeo frente → costas → vídeo → cartão
+    (3 s por foto, zoom lento, transição de 0,4 s), em 9:16 e 4:5; grava um formato por vez (vários ao mesmo tempo engasgam o celular) ·
     `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
 - `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
   Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
@@ -59,9 +59,11 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
 - **Vertical 9:16:** texto, preço e marca fora das áreas cobertas pela interface do TikTok/Instagram
   (`SAFE_V`); os pés ficam acima da faixa de legenda e carrinho.
 - **Fotos principais do TikTok Shop e dos marketplaces:** fundo branco, sem texto, sem logo, sem marca d'água.
-- **Vídeo do TikTok Shop:** no máximo 15 s (na montagem, a parte do vídeo é encurtada para caber).
-- **Montagem (modo vídeo):** ordem escolhida pelo dono: vídeo → frente → costas, 3 s por foto; o estilo de texto
-  (Editorial, Etiqueta, Sem texto), o cenário e a marca valem igual às fotos.
+- **Vídeo do TikTok Shop:** no máximo 15 s.
+- **Frente e costas automáticas:** a 1ª foto enviada é a frente e a 2ª as costas (3ª frente, 4ª costas…). Nos 6 espaços
+  de foto as duas aparecem lado a lado, frente à esquerda (inclusive nas fotos de fundo branco). "Inverter frente e costas" troca.
+- **7º espaço (foto de frente aberta + vídeo enviado):** vídeo frente (3 s) → costas (3 s) → vídeo → cartão da marca,
+  em 9:16 e 4:5. Estilo de texto (Editorial, Etiqueta, Sem texto), cenário e marca iguais aos das fotos.
 - **Cenário da marca:** igual ao logo (azul-noite liso, estrelas de 4 pontas e pontos, horizonte curvo em areia).
 - O dono preferiu os **cenários desenhados** às fotos geradas por IA; não troque sem ele pedir.
 - **Marcas disponíveis:** logo original, D&A com círculo, D&A sem círculo, marca d'água com e sem círculo, nenhuma.

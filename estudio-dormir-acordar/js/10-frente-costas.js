@@ -14,7 +14,9 @@ function drawPairLabels(ctx,P,tone,ya,yb){
   if(!S.pairLabels) return;
   const fs=P.unit*.024, sp=fs*.22;
   ctx.save(); ctx.font=`600 ${fs}px ${F.sans}`; ctx.fillStyle = tone==="light" ? "rgba(36,37,63,.72)" : "rgba(241,232,212,.9)";
-  for(const [t,sl,y] of [["FRENTE",P.a,ya],["COSTAS",P.b,yb]]){ const w=spacedWidth(ctx,t,sp), cx=(sl.x0+sl.x1)/2; spaced(ctx,t,cx-w/2,y,sp); }
+  for(const [t,sl,y] of [["FRENTE",P.a,ya],["COSTAS",P.b,yb]]){ const w=spacedWidth(ctx,t,sp), cx=(sl.x0+sl.x1)/2;
+    if(tone==="night"){ ctx.save(); ctx.fillStyle=C.navy; ctx.shadowColor=C.navy; ctx.shadowBlur=fs; ctx.fillRect(cx-w/2-fs*.6,y-fs*1.2,w+fs*1.2,fs*1.7); ctx.restore(); } // sem estrela em cima da palavra
+    spaced(ctx,t,cx-w/2,y,sp); }
   ctx.restore();
 }
 function drawSubjectPair(ctx,front,back,W,H,fmt,scene,plan,tone){
@@ -54,7 +56,7 @@ function renderFormat(ctx, W, H, item, fmt, t, endAt, opt){
   if(item.kind==="video"){
     drawFit(ctx,item.el,item.w,item.h,W,H,item.adj,null);
     scrim(ctx,W,H,plan);
-    const fade = t==null?1:Math.min(1,Math.max(0,(t-(item.trim||0))/.5));
+    const fade = t==null||opt.noFade ? 1 : Math.min(1,Math.max(0,(t-(item.trim||0))/.5));
     const k = (S.endCard && endAt!=null && t!=null) ? Math.min(1,Math.max(0,(t-(endAt-1.6))/.5)) : 0;
     if(plan.text) plan.text.tb.draw(ctx,plan.text.x,plan.text.y,"photo",fade*(1-k));
     if(k<1) drawMark(ctx,W,plan,"photo",1-k);

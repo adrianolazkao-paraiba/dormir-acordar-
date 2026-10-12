@@ -36,7 +36,8 @@
           <div class="field"><label for="pairSel">Frente e costas</label>
             <select id="pairSel"></select></div>
           <label class="check"><input id="pairLabels" type="checkbox" checked> Escrever “Frente” e “Costas”</label>
-          <p class="hint">Escolha a foto de costas da mesma peça para mostrar as duas lado a lado. A foto de costas não sai sozinha no pacote.</p>
+          <button class="btn ghost sm" type="button" id="pairSwap">Inverter frente e costas</button>
+          <p class="hint">A 1ª foto enviada é a frente e a 2ª as costas da mesma peça: as duas aparecem lado a lado, frente à esquerda. A foto de costas não sai sozinha no pacote.</p>
         </div>
       </section>
 
@@ -116,18 +117,6 @@
       <div class="grid" id="grid"></div>
       <div class="results" id="results"></div>
 
-      <section class="montage" id="montage" hidden aria-labelledby="mH">
-        <div class="stage-h"><h2 id="mH">Montagem: vídeo + frente + costas</h2></div>
-        <p class="hint" id="mHint">Um vídeo só: abre com o seu vídeo e termina com a foto de frente e a de costas da peça (3 s cada), com o mesmo cenário, marca e estilo de texto.</p>
-        <div class="row2" id="mPick">
-          <div class="field"><label for="mFront">Foto de frente</label><select id="mFront"></select></div>
-          <div class="field"><label for="mBack">Foto de costas</label><select id="mBack"></select></div>
-        </div>
-        <div class="mboard" id="mBoard"></div>
-        <p class="hint" id="mInfo"></p>
-        <div><button class="btn" type="button" id="makeMontage">Gerar montagem</button></div>
-        <div class="results" id="mResults"></div>
-      </section>
 
 
     </section>

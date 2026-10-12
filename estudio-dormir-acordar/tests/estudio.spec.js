@@ -85,31 +85,50 @@ test("vídeo: prévia, 3 formatos e gravação", async ({ page }) => {
   await expect(page.locator(".res .btn.ghost")).toHaveCount(3);
 });
 
-test("montagem: vídeo + frente + costas nos 3 formatos", async ({ page }) => {
-  // duas fotos (frente e costas) e o vídeo; sem cenário para não depender do recorte
+test("frente e costas automáticas e vídeo frente + costas + vídeo (7º espaço)", async ({ page }) => {
+  // sem cenário para não depender do recorte: frente vermelha, costas azul
   await page.click('.scene[data-id="original"]');
-  await page.evaluate(() => { for (const id of ["tts-main", "mkt"]) S.include.delete(id); });
-  await page.setInputFiles("#file", { name: "frente.png", mimeType: "image/png", buffer: Buffer.from(await page.evaluate(() => { const c = canvas(400, 600), g = c.getContext("2d"); g.fillStyle = "#c33"; g.fillRect(0, 0, 400, 600); return c.toDataURL("image/png").split(",")[1]; }), "base64") });
-  await page.setInputFiles("#file", { name: "costas.png", mimeType: "image/png", buffer: Buffer.from(await page.evaluate(() => { const c = canvas(400, 600), g = c.getContext("2d"); g.fillStyle = "#33c"; g.fillRect(0, 0, 400, 600); return c.toDataURL("image/png").split(",")[1]; }), "base64") });
-  await expect(page.locator("#montage")).toBeHidden(); // só aparece no modo vídeo
+  const png = cor => page.evaluate(cor => { const c = canvas(400, 600), g = c.getContext("2d"); g.fillStyle = cor; g.fillRect(0, 0, 400, 600); return c.toDataURL("image/png").split(",")[1]; }, cor);
+  await page.setInputFiles("#file", [
+    { name: "frente.png", mimeType: "image/png", buffer: Buffer.from(await png("#d22"), "base64") },
+    { name: "costas.png", mimeType: "image/png", buffer: Buffer.from(await png("#22d"), "base64") },
+  ]);
+  // 1ª foto = frente, 2ª = costas, ligadas sozinhas; a frente fica aberta
+  await page.waitForFunction(() => S.items.filter(i => i.kind === "photo" && !i.example).length === 2);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => S.items[0].pair === S.items[1] && S.sel === S.items[0])).toBe(true);
+  await expect(page.locator("#items .tag")).toHaveText([/frente/i, /costas/i]);
+  await expect(page.locator("#grid .card")).toHaveCount(6); // sem vídeo, sem o 7º espaço
+  // nos 6 espaços: frente à esquerda, costas à direita
+  const lados = await page.evaluate(async () => {
+    const out = {};
+    for (const f of FORMATS.filter(f => f.media.includes("photo"))) {
+      const c = canvas(f.w, f.h), g = c.getContext("2d"); renderFormat(g, f.w, f.h, S.items[0], f, null, null);
+      const px = (x, y) => [...g.getImageData(Math.round(f.w * x), Math.round(f.h * y), 1, 1).data];
+      const e = px(.3, .88), d = px(.75, .88); out[f.id] = e[0] > e[2] && d[2] > d[0];
+    }
+    return out;
+  });
+  expect(Object.values(lados).every(Boolean)).toBe(true);
+  expect(await page.evaluate(() => S.items.filter(i => i.kind === "photo" && !isBackOfAnother(i)).length)).toBe(1); // costas não sai sozinha
+  // inverter frente e costas
+  await page.click("#pairSwap");
+  expect(await page.evaluate(() => S.sel.name === "costas.png" && S.items[0].name === "costas.png" && backOf(S.items[0]).name === "frente.png")).toBe(true);
+  await page.click("#pairSwap");
+  // com o vídeo, aparece o 7º espaço na foto de frente
   await page.setInputFiles("#file", FIX + "video-teste.webm");
-  await expect(page.locator("#montage")).toBeVisible();
-  await expect(page.locator("#items .tag", { hasText: /frente/i })).toHaveCount(1);
-  await expect(page.locator("#items .tag", { hasText: /costas/i })).toHaveCount(1);
-  await expect(page.locator("#mBoard canvas")).toHaveCount(3);
-  const plano = await page.evaluate(() => FORMATS.filter(f => f.media.includes("video")).map(f => montagePlan(S.sel, f)));
-  expect(plano.every(p => p.segs.filter(s => s.k === "photo").length === 2)).toBe(true);
-  const tts = await page.evaluate(() => { const it = S.sel, d = it.dur; it.dur = 40; const p = montagePlan(it, FORMATS.find(f => f.id === "tts-video")); it.dur = d; return p.total; });
-  expect(tts).toBeLessThanOrEqual(15); // TikTok Shop nunca passa de 15 s
-  await page.selectOption("#mBack", "none");
-  await expect(page.locator("#mBoard canvas")).toHaveCount(2);
-  await page.selectOption("#mBack", { index: 1 });
-  await page.click("#makeMontage");
-  await expect(page.locator("#mResults .res", { hasText: "Montagem pronta" })).toBeVisible({ timeout: 120_000 });
-  await expect(page.locator("#mResults .res .btn.ghost")).toHaveCount(3);
-  const d = page.waitForEvent("download");
-  await page.locator("#mResults .res .btn.ghost").first().click();
-  expect((await d).suggestedFilename()).toMatch(/_montagem_feed\.(mp4|webm)$/);
+  await expect(page.locator("#grid .card")).toHaveCount(3); // modo vídeo continua igual
+  await page.click(".item >> nth=0");
+  await expect(page.locator("#grid .card")).toHaveCount(7);
+  await expect(page.locator(".mcard")).toContainText("frente + costas + vídeo");
+  const plano = await page.evaluate(() => ({ ...montagePlan(montageSource()), cartao: S.endCard }));
+  expect(plano.total).toBeCloseTo(3 + 3 + plano.vlen + (plano.cartao ? 2 : 0), 1);
+  await page.click(".mcard .btn:not(.ghost)");
+  await expect(page.locator("#results .res", { hasText: "Vídeo pronto" })).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator("#results .res .btn.ghost")).toHaveCount(2); // 9:16 e 4:5
+  const nomes = [];
+  for (let i = 0; i < 2; i++) { const d = page.waitForEvent("download"); await page.locator("#results .res .btn.ghost").nth(i).click(); nomes.push((await d).suggestedFilename()); }
+  expect(nomes.join(" ")).toMatch(/video-montagem_vertical\.(mp4|webm).*video-montagem_feed\.(mp4|webm)/);
 });
 
 test("arquivo quebrado avisa e não entra na lista", async ({ page }) => {

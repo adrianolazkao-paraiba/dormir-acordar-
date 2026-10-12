@@ -14,7 +14,7 @@ Transforma fotos e vídeos dos pijamas em posts prontos, nas medidas certas, com
 
 Recursos: recorte da modelo no próprio navegador, 8 cenários + "Seu cenário", textos de venda,
 6 opções de marca (logo, D&A, marca d'água), frente e costas lado a lado, vídeos com cartão final,
-montagem (vídeo + foto de frente + foto de costas num vídeo só),
+frente e costas automáticas (1ª foto = frente, 2ª = costas), vídeo frente + costas + vídeo em 9:16 e 4:5,
 pacote .zip e histórico "Já feitos".
 
 ## Arquivos do recorte (pasta `model`)

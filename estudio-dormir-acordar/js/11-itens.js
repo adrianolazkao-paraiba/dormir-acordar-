@@ -35,6 +35,7 @@ function loadVideo(file){
 }
 async function addFiles(files){
   const list=[...files]; if(!list.length) return;
+  const firstNewId=uid+1;
   const dropExample=()=>{ if(S.items.length && S.items[0].example){ S.items=S.items.filter(i=>!i.example); } };
   let firstNew=null;
   for(const f of list){
@@ -53,15 +54,36 @@ async function addFiles(files){
       toast(/heic|heif/i.test(f.name)? "Este navegador não abre fotos HEIC. Exporte a foto como JPG e envie de novo." : "Não consegui abrir “"+f.name+"”. Envie JPG, PNG, MP4 ou MOV.");
     }
   }
-  if(firstNew) select(firstNew);
+  autoPair();
+  // abre a primeira foto nova (a de frente), para já mostrar frente e costas e o vídeo da montagem
+  const firstPhoto=S.items.find(i=>i.kind==="photo" && !i.example && i.id>=firstNewId && !isBackOfAnother(i));
+  if(firstPhoto||firstNew) select(firstPhoto||firstNew);
   renderAll();
 }
+/* frente e costas automáticas pela ordem de envio: 1ª foto = frente, 2ª = costas, 3ª = frente, 4ª = costas…
+   Respeita o que a pessoa já ligou à mão (e a foto marcada como "Só esta foto"). */
+function autoPair(){
+  const ph=S.items.filter(i=>i.kind==="photo" && !i.example);
+  const free=p=>!backOf(p) && !isBackOfAnother(p) && !p.solo;
+  for(let i=0;i<ph.length;i++){
+    const p=ph[i]; if(!free(p)) continue;
+    const q=ph.slice(i+1).find(free);
+    if(q){ p.pair=q; if(needsCut()) queueCut(q); }
+  }
+}
+/* troca quem é frente e quem é costas (a ordem das fotos escolhidas no celular nem sempre é a esperada) */
+function swapPair(){
+  const f=S.sel, b=f&&backOf(f); if(!b) return;
+  stopPreview(); f.pair=null; b.pair=f;
+  const i=S.items.indexOf(f), j=S.items.indexOf(b); S.items[i]=b; S.items[j]=f; // a nova frente vem antes
+  select(b);
+}
 function removeItem(it){
-  stopPlayback();
+  stopPreview(); stopPlayback();
   if(it.url) URL.revokeObjectURL(it.url);
   S.items=S.items.filter(x=>x!==it); S.items.forEach(o=>{ if(o.pair===it) o.pair=null; });
   if(!S.items.length) addExample();
   if(S.sel===it) S.sel=S.items[0];
   renderAll();
 }
-function select(it){ stopPlayback(); S.sel=it; syncAdj(); renderAll(); }
+function select(it){ stopPreview(); stopPlayback(); S.sel=it; syncAdj(); renderAll(); }

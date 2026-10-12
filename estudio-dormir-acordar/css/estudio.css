@@ -160,13 +160,9 @@ button,input,select,textarea{font:inherit; color:inherit}
 
 .results{display:flex; flex-direction:column; gap:8px}
 
-/* Montagem: vídeo + frente + costas */
-.montage{margin-top:6px; background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:clamp(16px,2vw,24px); display:flex; flex-direction:column; gap:14px; min-width:0}
-.mboard{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; max-width:560px}
-.mboard figure{margin:0; display:flex; flex-direction:column; gap:6px; min-width:0}
-.mboard canvas{width:100%; aspect-ratio:9/16; border-radius:10px; background:var(--stage); box-shadow:var(--shadow-sm); display:block}
-.mboard figcaption{font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--gold)}
-.mboard figcaption span{font-weight:400; letter-spacing:0; text-transform:none; color:var(--muted)}
+/* 7º espaço: vídeo frente + costas + vídeo */
+.mcard .foot{flex-wrap:wrap; justify-content:flex-start}
+.mcard .vpick{flex:1 1 100%; background:var(--card); border:1px solid var(--line); border-radius:var(--r-sm); padding:7px 9px; font-size:12.5px}
 .res{display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:var(--r-sm); padding:10px 12px; font-size:13px; flex-wrap:wrap}
 .res b{color:var(--fg); font-weight:500}
 

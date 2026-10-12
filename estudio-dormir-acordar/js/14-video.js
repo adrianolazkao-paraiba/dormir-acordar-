@@ -34,7 +34,7 @@ async function makeVideos(it){
   const fmts=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)); if(!fmts.length) return;
   const mime=pickMime(); if(mime===null){ toast("Este navegador não grava vídeo. Use Chrome, Edge ou Safari atualizado."); return; }
   const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
-  stopPlayback(); S.busy=true; renderDock(); renderMontage(); progress(0);
+  S.busy=true; await stopPreview(); stopPlayback(); renderDock(); progress(0);
   const v=it.el; const res=$("results"); res.innerHTML="";
   try{
     const audioTrack=await videoAudioTrack(it);
@@ -53,7 +53,7 @@ async function makeVideos(it){
     for(const j of jobs) renderFormat(j.ctx,j.fmt.w,j.fmt.h,it,j.fmt,start,j.end);
     for(const j of jobs) j.rec.start(1000);
     const maxEnd=Math.max(...jobs.map(j=>j.end));
-    await v.play();
+    await v.play().catch(()=>{ v.muted=true; return v.play(); }); // Safari: grava sem som se não deixar tocar com som
     await new Promise(resolve=>{
       const step=()=>{
         const t=v.currentTime;
@@ -76,7 +76,7 @@ async function makeVideos(it){
     showResults(out, ext, /avc1|h264/i.test(jobs[0].rec.mimeType||mime));
   }catch(e){
     console.warn(e); toast("A gravação parou antes do fim. Deixe esta tela aberta e tente de novo.");
-  } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); renderMontage(); drawPreviews(); }
+  } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); drawPreviews(); }
 }
 /* som do vídeo só para a gravação (o alto-falante fica mudo enquanto grava) */
 async function videoAudioTrack(it){

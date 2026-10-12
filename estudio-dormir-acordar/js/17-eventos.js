@@ -10,13 +10,13 @@ function bind(){
   const adj=(id,key,out,fmt)=>$(id).addEventListener("input",e=>{ if(!S.sel) return; S.sel.adj[key]=+e.target.value; $(out).textContent=fmt(+e.target.value); schedule(); });
   adj("adjSize","size","oSize",v=>v+"%"); adj("adjX","x","oX",v=>v); adj("adjY","y","oY",v=>v);
   $("trim").addEventListener("input",e=>{ const it=S.sel; if(!it||it.kind!=="video") return; it.trim=+e.target.value; $("oTrim").textContent=fmtTime(it.trim)+" s"; seek(it.trim); });
-  $("trim").addEventListener("change",()=>{ renderGrid(); renderMontage(); schedule(); });
+  $("trim").addEventListener("change",()=>{ renderGrid(); schedule(); });
   const fields={pName:"name",pPrice:"price",pOld:"old",pEyebrow:"eyebrow",pCta:"cta"};
   for(const [id,k] of Object.entries(fields)){ const el=$(id); el.value=S.P[k]||""; el.addEventListener("input",()=>{ S.P[k]=el.value; savePrefs(); schedule(); }); }
   for(const b of $("layoutSeg").children){ b.addEventListener("click",()=>{ S.layout=b.dataset.v; savePrefs(); renderSegs(); schedule(); }); }
   for(const b of $("markSeg").children) b.addEventListener("click",()=>{ S.mark=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
   for(const b of $("vidPosSeg").children) b.addEventListener("click",()=>{ S.vidPos=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
-  $("endCard").checked=S.endCard; $("endCard").addEventListener("change",e=>{ S.endCard=e.target.checked; savePrefs(); renderMontage(); schedule(); });
+  $("endCard").checked=S.endCard; $("endCard").addEventListener("change",e=>{ S.endCard=e.target.checked; savePrefs(); updateMontageCard(); schedule(); });
   $("showZones").addEventListener("change",e=>{ S.zones=e.target.checked; for(const c of cards.values()) drawZones(c.zones,c.fmt); });
   $("playBtn").addEventListener("click",togglePlay);
   $("scrub").addEventListener("input",e=>{ const it=S.sel; if(!it||it.kind!=="video") return; seek(e.target.value/1000*it.dur); it.el.addEventListener("seeked",()=>{ tick(); },{once:true}); });
@@ -24,12 +24,12 @@ function bind(){
   $("capBtn").addEventListener("click",writeCaptions);
   $("pairSel").addEventListener("change",e=>{ const it=S.sel; if(!it) return; const o=S.items.find(x=>String(x.id)===e.target.value)||null;
     if(o && o.pair===it) o.pair=null; // evita frente e costas apontando uma para a outra
-    it.pair=o; if(o && needsCut()) queueCut(o); renderItems(); renderDock(); schedule(); });
+    it.pair=o; it.solo=!o; if(o){ o.solo=false; if(needsCut()) queueCut(o); } stopPreview(); renderItems(); renderGrid(); renderDock(); schedule(); });
   $("pairLabels").addEventListener("change",e=>{ S.pairLabels=e.target.checked; schedule(); });
   for(const b of $("galFilter").children) b.addEventListener("click",()=>{ G.filter=b.dataset.v; try{ localStorage.setItem("da-gal-filter",G.filter); }catch(e){} renderGalFilter(); renderGallery(); });
   $("galAuto").addEventListener("change",e=>{ try{ localStorage.setItem("da-gal-auto",e.target.checked?"1":"0"); }catch(err){} });
   $("galMore").addEventListener("click",()=>{ G.limit+=48; subscribeGallery(); });
-  bindMontage();
+  $("pairSwap").addEventListener("click",swapPair);
   let rt; window.addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(schedule,120); });
   document.addEventListener("visibilitychange",()=>{ if(document.hidden && S.busy) toast("Volte para esta aba: a gravação do vídeo pausa quando a tela fica escondida."); });
 }
