@@ -2,10 +2,10 @@
 /* ============ Formatos ============ */
 const SAFE_V = { t:.13, b:.22, l:.07, r:.07, icons:.16 }; // 9:16: topo, legenda/carrinho embaixo, coluna de botões à direita
 const FORMATS = [
-  { id:"feed", plat:"Instagram", name:"Feed e carrossel", w:1080, h:1350, ratio:"4:5", media:["photo","video"], text:true, logo:true, mode:"stack",
+  { id:"feed", plat:"Instagram", name:"Feed e carrossel", w:1080, h:1350, ratio:"4:5", media:["photo","video"], text:true, logo:true, mode:"stack", maxDur:20,
     safe:{t:.06,b:.07,l:.07,r:.07}, grid34:true, note:"No seu perfil o post aparece cortado em 3:4. As linhas tracejadas mostram o corte." },
   { id:"vertical", plat:"Reels · Stories · TikTok", name:"Vertical tela cheia", w:1080, h:1920, ratio:"9:16", media:["photo","video"], text:true, logo:true,
-    safe:SAFE_V, vertical:true, note:"Texto, preço e logo ficam fora das áreas cobertas pelos botões do Instagram e do TikTok." },
+    safe:SAFE_V, vertical:true, maxDur:20, note:"Texto, preço e logo ficam fora das áreas cobertas pelos botões do Instagram e do TikTok. Vídeo de até 20 s." },
   { id:"tts-video", plat:"TikTok Shop", name:"Vídeo do produto", w:1080, h:1920, ratio:"9:16", media:["video"], text:true, logo:true,
     safe:SAFE_V, vertical:true, maxDur:15, note:"Limitado a 15 s, a duração recomendada para vídeo de produto na loja." },
   { id:"tts-main", plat:"TikTok Shop", name:"Foto principal da vitrine", w:1080, h:1080, ratio:"1:1", media:["photo"], text:false, logo:false,

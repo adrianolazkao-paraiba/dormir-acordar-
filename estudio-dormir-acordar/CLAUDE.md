@@ -61,7 +61,8 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
 - **Vertical 9:16:** texto, preço e marca fora das áreas cobertas pela interface do TikTok/Instagram
   (`SAFE_V`); os pés ficam acima da faixa de legenda e carrinho.
 - **Fotos principais do TikTok Shop e dos marketplaces:** fundo branco, sem texto, sem logo, sem marca d'água.
-- **Vídeo do TikTok Shop:** no máximo 15 s.
+- **Duração dos vídeos:** Instagram (Feed 4:5) e Reels/Stories/TikTok (9:16) no máximo 20 s — inclusive a montagem
+  (frente 3 s + costas 3 s + até 12 s de vídeo + cartão 2 s); TikTok Shop no máximo 15 s (`maxDur` em `02-formatos.js`).
 - **Vídeos baixados:** sempre MP4 padrão (H.264 + AAC, arquivo inteiro), que abre no WhatsApp, Instagram e iPhone.
 - **Plano de cada formato:** Feed 4:5 e quadrado 1:1 com marca e texto em cima e peça grande embaixo (`mode:"stack"`),
   como o 9:16 e o Pinterest; o dono reprovou o texto em coluna ao lado com as fotos pequenas.

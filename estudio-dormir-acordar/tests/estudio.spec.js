@@ -159,6 +159,17 @@ test("vídeo: dizeres e logo embaixo por padrão, numa faixa só, fora das área
   expect(r).toEqual([]);
 });
 
+test("duração: Instagram e Reels/TikTok até 20 s, TikTok Shop até 15 s, mesmo com vídeo longo", async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const vid = { trim: 0, dur: 53 }, src = { vid };
+    const fmt = id => FORMATS.find(f => f.id === id);
+    return { m916: montagePlan(src, fmt("vertical")).total, m45: montagePlan(src, fmt("feed")).total,
+      c916: outDuration(VOUTS.find(o => o.id === "c-vertical"), src, vid), c45: outDuration(VOUTS.find(o => o.id === "c-feed"), src, vid),
+      tts: outDuration(VOUTS.find(o => o.id === "c-tts"), src, vid), curto: montagePlan({ vid: { trim: 0, dur: 6 } }, fmt("vertical")).total };
+  });
+  expect(r).toEqual({ m916: 20, m45: 20, c916: 20, c45: 20, tts: 15, curto: 14 });
+});
+
 test("MP4 padrão para WhatsApp: MP4 fragmentado vira MP4 inteiro H.264 + AAC", async ({ page }) => {
   // o navegador grava MP4 fragmentado (o WhatsApp recusa como "formato incomum"); o estúdio reorganiza o arquivo
   const r = await page.evaluate(async () => {

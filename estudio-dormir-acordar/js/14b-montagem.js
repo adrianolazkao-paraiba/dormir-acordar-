@@ -3,7 +3,7 @@
    No item "Frente e costas" da barra, abaixo dos 6 espaços de foto, fica o painel de vídeo:
    - Montagem (ordem definida pelo dono): frente (3 s) → costas (3 s) → vídeo (a partir de "Começar em") → cartão da marca,
      em 9:16 e 4:5.
-   - Só o vídeo: Feed 4:5, Reels 9:16 e TikTok Shop 9:16 (até 15 s).
+   - Só o vídeo: Feed 4:5 e Reels 9:16 (até 20 s) e TikTok Shop 9:16 (até 15 s). Montagem também até 20 s.
    Tudo é gravado um formato por vez (vários vídeos grandes ao mesmo tempo engasgam o celular) e convertido para MP4 padrão.
    Cenário, marca e estilo de texto são os mesmos das fotos. */
 const MONT = { PHOTO:3, END:2, XF:.4, video:null, preview:null, fmt:"vertical" };
@@ -15,8 +15,11 @@ function montageSource(){
   const vids=S.items.filter(i=>i.kind==="video"); if(!vids.length) return null;
   return { front:it, back, vid:vids.find(v=>v.id===MONT.video)||vids[0], vids };
 }
-function montagePlan(src){
-  const start=src.vid.trim||0, vlen=Math.max(0,src.vid.dur-start), end=S.endCard?MONT.END:0;
+/* duração: no máximo a do formato (Instagram e Reels/TikTok até 20 s): frente + costas + trecho do vídeo + cartão */
+function montagePlan(src, fmt){
+  fmt=fmt||FORMATS.find(f=>f.id==="vertical");
+  const start=src.vid.trim||0, end=S.endCard?MONT.END:0;
+  let vlen=Math.max(0,src.vid.dur-start); if(fmt.maxDur) vlen=Math.max(1,Math.min(vlen, fmt.maxDur-2*MONT.PHOTO-end));
   return { start, vEnd:start+vlen, vlen, end, total:2*MONT.PHOTO+vlen+end };
 }
 /* foto pronta em duas camadas: base (cenário + modelo, que ganha zoom lento) e texto/marca (parados) */
@@ -38,7 +41,7 @@ function seekTo(v,t){ return new Promise(r=>{ const k=setTimeout(()=>{ v.removeE
 /* Toca a montagem num canvas em tempo real (para gravar ou só para ver a prévia).
    o: {src, fmt, c, onProg, cancel} — devolve true se chegou ao fim. */
 async function runMontage(o){
-  const {src,fmt,c}=o, W=c.width, H=c.height, ctx=c.getContext("2d"), plan=montagePlan(src), v=src.vid.el;
+  const {src,fmt,c}=o, W=c.width, H=c.height, ctx=c.getContext("2d"), plan=montagePlan(src,fmt), v=src.vid.el;
   const Lf=photoLayers(src.front,fmt,W,H), Lb=photoLayers(src.back,fmt,W,H);
   const prev=canvas(W,H), pg=prev.getContext("2d"), snap=()=>{ pg.clearRect(0,0,W,H); pg.drawImage(c,0,0); };
   const fadePrev=u=>{ if(u<MONT.XF){ ctx.save(); ctx.globalAlpha=1-u/MONT.XF; ctx.drawImage(prev,0,0,W,H); ctx.restore(); } };
@@ -73,7 +76,7 @@ async function runMontage(o){
   });
 }
 
-/* Toca só o vídeo num formato (de "Começar em" até o fim; TikTok Shop até 15 s), com o cartão da marca no fim. */
+/* Toca só o vídeo num formato (de "Começar em" até o limite do formato: 20 s; TikTok Shop 15 s), com o cartão da marca no fim. */
 async function runClip(o){
   const {vid,fmt,c}=o, W=c.width, H=c.height, ctx=c.getContext("2d"), v=vid.el, start=vid.trim||0;
   const end=fmt.maxDur? Math.min(vid.dur,start+fmt.maxDur) : vid.dur;
@@ -97,16 +100,16 @@ async function runClip(o){
 
 /* ---- o que dá para gerar ---- */
 const VOUTS=[
-  {id:"m-vertical", grupo:"m", fmt:"vertical", nome:"Reels · Stories · TikTok", ratio:"9:16"},
-  {id:"m-feed",     grupo:"m", fmt:"feed",     nome:"Feed e carrossel",         ratio:"4:5"},
-  {id:"c-vertical", grupo:"c", fmt:"vertical", nome:"Reels · Stories · TikTok", ratio:"9:16"},
-  {id:"c-feed",     grupo:"c", fmt:"feed",     nome:"Feed e carrossel",         ratio:"4:5"},
+  {id:"m-vertical", grupo:"m", fmt:"vertical", nome:"Reels · Stories · TikTok", ratio:"9:16 · até 20 s"},
+  {id:"m-feed",     grupo:"m", fmt:"feed",     nome:"Feed e carrossel",         ratio:"4:5 · até 20 s"},
+  {id:"c-vertical", grupo:"c", fmt:"vertical", nome:"Reels · Stories · TikTok", ratio:"9:16 · até 20 s"},
+  {id:"c-feed",     grupo:"c", fmt:"feed",     nome:"Feed e carrossel",         ratio:"4:5 · até 20 s"},
   {id:"c-tts",      grupo:"c", fmt:"tts-video",nome:"TikTok Shop · produto",    ratio:"9:16 · até 15 s"},
 ];
 const VSEL=new Set(VOUTS.map(o=>o.id));
 function outDuration(o, src, vid){
   const f=FORMATS.find(x=>x.id===o.fmt);
-  if(o.grupo==="m") return montagePlan(src).total;
+  if(o.grupo==="m") return montagePlan(src,f).total;
   const len=Math.max(0,vid.dur-(vid.trim||0)); return f.maxDur? Math.min(len,f.maxDur) : len;
 }
 
