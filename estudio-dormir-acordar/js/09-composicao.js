@@ -42,17 +42,27 @@ function drawFit(ctx, src, sw, sh, W, H, adj, bbox, region){
   x+=(adj.x/50)*W*.25; y+=(adj.y/50)*H*.25;
   if(x>0.5||y>0.5||x+dw<W-0.5||y+dh<H-0.5){
     // completa o quadro com a cor das bordas da própria foto (sem repetir a imagem atrás)
+    // e esfuma as bordas da foto que ficam dentro do quadro, para não parecer um retângulo colado
     fillEdges(ctx,src,sw,sh,W,H);
-    ctx.drawImage(src,x,y,dw,dh);
-    // costura suave entre a foto e o preenchimento
-    ctx.save(); const f=Math.max(2,Math.min(W,H)*.02);
-    const e=edgeColors(src,sw,sh);
-    if(y>0.5){ const g=ctx.createLinearGradient(0,y,0,y+f); g.addColorStop(0,e.top); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(x,y,dw,f); }
-    if(y+dh<H-0.5){ const g=ctx.createLinearGradient(0,y+dh,0,y+dh-f); g.addColorStop(0,e.bottom); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(x,y+dh-f,dw,f); }
-    ctx.restore();
+    const f=Math.max(2,Math.min(W,H,dw,dh)*.08), t=featherCanvas(W,H), g=t.getContext("2d");
+    g.globalCompositeOperation="source-over"; g.clearRect(0,0,W,H); g.drawImage(src,x,y,dw,dh);
+    g.globalCompositeOperation="destination-out";
+    const fade=(x0,y0,x1,y1)=>{ const gr=g.createLinearGradient(x0,y0,x1,y1); gr.addColorStop(0,"rgba(0,0,0,1)"); gr.addColorStop(1,"rgba(0,0,0,0)"); return gr; };
+    if(x>0.5){ g.fillStyle=fade(x,0,x+f,0); g.fillRect(x,y,f,dh); }
+    if(x+dw<W-0.5){ g.fillStyle=fade(x+dw,0,x+dw-f,0); g.fillRect(x+dw-f,y,f,dh); }
+    if(y>0.5){ g.fillStyle=fade(0,y,0,y+f); g.fillRect(x,y,dw,f); }
+    if(y+dh<H-0.5){ g.fillStyle=fade(0,y+dh,0,y+dh-f); g.fillRect(x,y+dh-f,dw,f); }
+    ctx.drawImage(t,0,0);
     return;
   }
   ctx.drawImage(src,x,y,dw,dh);
+}
+/* tela de apoio reaproveitada (o vídeo chama isto a cada quadro; criar uma nova por quadro pesa no celular) */
+const _feather=new Map();
+function featherCanvas(W,H){
+  const k=W+"x"+H; let c=_feather.get(k);
+  if(!c){ if(_feather.size>8) _feather.clear(); c=canvas(W,H); _feather.set(k,c); }
+  return c;
 }
 function drawCover(ctx, src, sw, sh, W, H, adj, blurFill){
   const cover=Math.max(W/sw,H/sh), s=cover*(adj.size/100);
@@ -234,6 +244,16 @@ function lightVeil(ctx,W,H,plan){
   const g=ctx.createRadialGradient(0,0,rx*.25,0,0,rx); g.addColorStop(0,"rgba(247,241,231,.82)"); g.addColorStop(.6,"rgba(247,241,231,.55)"); g.addColorStop(1,"rgba(247,241,231,0)");
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,Math.PI*2); ctx.fill(); ctx.restore();
 }
+/* céu da marca: apaga as estrelas atrás do texto e da marca (o céu é azul liso, então basta pintar por cima com borda suave) */
+function clearSky(ctx,plan){
+  const pad=plan.unit*.03, boxes=[];
+  if(plan.text) boxes.push([plan.text.x,plan.text.y,plan.text.tb.w,plan.text.tb.h]);
+  if(plan.mark) boxes.push([plan.mark.x,plan.mark.y,plan.mark.w,plan.mark.h]);
+  if(!boxes.length) return;
+  ctx.save(); ctx.fillStyle=C.navy; ctx.shadowColor=C.navy; ctx.shadowBlur=pad;
+  for(const [x,y,w,h] of boxes) ctx.fillRect(x-pad,y-pad,w+pad*2,h+pad*2);
+  ctx.restore();
+}
 function scrim(ctx,W,H,plan){
   if(!plan.text || S.layout!=="editorial") return;
   let g;
@@ -244,9 +264,11 @@ function scrim(ctx,W,H,plan){
 function drawEndCard(ctx,W,H,fmt,k){
   if(k<=0) return;
   ctx.save(); ctx.globalAlpha=Math.min(1,k)*.92; ctx.fillStyle=C.deep; ctx.fillRect(0,0,W,H); ctx.globalAlpha=Math.min(1,k);
-  drawStars(ctx,W,H,H*.9,9);
   const unit=Math.min(W,H*.8), lw=unit*.46, lh=lw*(logoImg.naturalHeight||337)/(logoImg.naturalWidth||360);
-  const cy=H*.42; if(logoImg.naturalWidth){ ctx.save(); roundRect(ctx,(W-lw)/2,cy-lh/2,lw,lh,lw*.08); ctx.clip(); ctx.drawImage(logoImg,(W-lw)/2,cy-lh/2,lw,lh); ctx.restore(); }
+  const cy=H*.42;
+  // estrelas só fora da coluna central, onde ficam logo, nome, preço e botão
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.rect(W*.08,cy-lh/2-unit*.04,W*.84,lh+unit*.42); ctx.clip("evenodd");
+  drawStars(ctx,W,H,H*.9,9); ctx.restore(); if(logoImg.naturalWidth){ ctx.save(); roundRect(ctx,(W-lw)/2,cy-lh/2,lw,lh,lw*.08); ctx.clip(); ctx.drawImage(logoImg,(W-lw)/2,cy-lh/2,lw,lh); ctx.restore(); }
   ctx.textAlign="center"; let y=cy+lh/2+unit*.1;
   if(S.P.name){ ctx.font=`300 ${unit*.06}px ${F.display}`; ctx.fillStyle=C.areia; ctx.fillText(wrap(ctx,S.P.name,W*.8,1)[0],W/2,y); y+=unit*.075; }
   const pr=money(S.P.price); if(pr){ ctx.font=`500 ${unit*.046}px ${F.sans}`; ctx.fillStyle=C.gold; ctx.fillText(pr,W/2,y); y+=unit*.08; }

@@ -43,7 +43,12 @@ async function cutout(img, w, h){
       if(y>0&&B[j-n]&&!lab[j-n]){lab[j-n]=id;stack.push(j-n);} if(y<n-1&&B[j+n]&&!lab[j+n]){lab[j+n]=id;stack.push(j+n);} }
     areas.push(area); }
   const largest=Math.max(0,...areas); if(!largest) return null;
-  const keepId=areas.map(a=>a>=largest*.04);
+  // caixa de cada parte, para descartar pedaços soltos longe da modelo (outra pessoa, móveis ao fundo)
+  const bx=areas.map(()=>[n,n,-1,-1]);
+  for(let i=0;i<n*n;i++){ const id=lab[i]; if(!id) continue; const b=bx[id], x=i%n, y=(i/n)|0; if(x<b[0])b[0]=x; if(y<b[1])b[1]=y; if(x>b[2])b[2]=x; if(y>b[3])b[3]=y; }
+  const main=bx[areas.indexOf(largest)], marg=n*.03;
+  const touches=b=> b[0]<=main[2]+marg && b[2]>=main[0]-marg && b[1]<=main[3]+marg && b[3]>=main[1]-marg;
+  const keepId=areas.map((a,id)=>a>=largest*.04 && (a===largest || touches(bx[id])));
   const keep=new Uint8Array(n*n); let x0=n,y0=n,x1=-1,y1=-1;
   for(let i=0;i<n*n;i++) if(lab[i]&&keepId[lab[i]]){ keep[i]=1; const x=i%n,y=(i/n)|0; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
   const near=new Uint8Array(n*n), R=3; // margem para não cortar as bordas suaves (cabelo, renda)

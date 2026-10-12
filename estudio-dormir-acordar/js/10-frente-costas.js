@@ -62,6 +62,7 @@ function renderFormat(ctx, W, H, item, fmt, t, endAt){
   const back = backOf(item);
   if(scene!=="original" && item.cut){
     ctx.drawImage(sceneCanvas(scene,W,H),0,0); tone=sceneTone(scene);
+    if(scene==="night") clearSky(ctx,plan);
     if(back && back.cut) drawSubjectPair(ctx,item,back,W,H,fmt,scene,plan,scene==="custom"?"photo":tone);
     else { drawSubject(ctx,item,W,H,fmt,scene,plan); if(back) warn="Recortando a foto de costas…"; }
     if(scene==="custom"){ tone="photo"; scrim(ctx,W,H,plan); }

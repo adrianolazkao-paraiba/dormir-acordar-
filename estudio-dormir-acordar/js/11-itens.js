@@ -13,10 +13,25 @@ function loadImage(file){
       c.getContext("2d").drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(url); res(c); };
     im.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("img")); }; im.src=url; });
 }
+/* No iPhone/iPad o Safari só carrega o primeiro quadro quando o vídeo é posicionado, por isso
+   o pedido de posição logo depois dos metadados, e um tempo limite para nunca ficar esperando. */
 function loadVideo(file){
   return new Promise((res,rej)=>{ const url=URL.createObjectURL(file), v=document.createElement("video");
-    v.muted=true; v.playsInline=true; v.preload="auto"; v.crossOrigin="anonymous";
-    v.onloadeddata=()=>res({v,url}); v.onerror=()=>rej(new Error("video")); v.src=url; v.load(); });
+    v.muted=true; v.playsInline=true; v.setAttribute("playsinline",""); v.preload="auto";
+    let done=false;
+    const fail=()=>{ if(done) return; done=true; clearTimeout(timer); URL.revokeObjectURL(url); rej(new Error("video")); };
+    const ok=async()=>{
+      if(done || !v.videoWidth) return; done=true; clearTimeout(timer);
+      if(!isFinite(v.duration)){ // alguns WebM chegam sem duração: vai ao fim para o navegador descobrir
+        await new Promise(r=>{ const t=setTimeout(r,3000); v.addEventListener("durationchange",function f(){ if(isFinite(v.duration)){ clearTimeout(t); v.removeEventListener("durationchange",f); r(); } }); v.currentTime=1e7; });
+        await new Promise(r=>{ const t=setTimeout(r,1500); v.addEventListener("seeked",()=>{ clearTimeout(t); r(); },{once:true}); v.currentTime=0; });
+      }
+      isFinite(v.duration) ? res({v,url}) : (URL.revokeObjectURL(url), rej(new Error("video")));
+    };
+    v.onloadedmetadata=()=>{ try{ v.currentTime=Math.min(.05,(isFinite(v.duration)?v.duration:1)/2); }catch(e){} };
+    v.onloadeddata=ok; v.onseeked=()=>{ v.onseeked=null; ok(); }; v.onerror=fail;
+    const timer=setTimeout(()=>{ v.videoWidth? ok() : fail(); },20000);
+    v.src=url; v.load(); });
 }
 async function addFiles(files){
   const list=[...files]; if(!list.length) return;

@@ -13,6 +13,19 @@ escreva textos de interface em português do Brasil.
 
 Sempre rode `npm test` depois de mudar algo e antes de dizer que terminou.
 
+## Regra do dono para toda entrega (obrigatória)
+
+Antes de entregar qualquer tarefa ou link para o Adriano:
+
+1. **Revise o código 3 vezes**, e a cada revisão melhore o que achar (bugs, compatibilidade com
+   iPhone/iPad/Safari, acabamento visual, mensagens para o usuário).
+2. **Teste cada componente na prática**, não só os testes automáticos: use o estúdio como uma pessoa
+   usaria (enviar foto real de modelo, recorte, cenários, marcas, textos, baixar arte, .zip, vídeo,
+   "Já feitos"), em tela de computador, iPhone (390×844) e iPad (820×1180, em pé e deitado), e
+   **olhe as imagens geradas** para conferir o resultado.
+3. Só depois disso entregue o acesso, dizendo o que foi testado e o que não deu para testar
+   (por exemplo, Safari de verdade no iPhone).
+
 ## Estrutura
 
 - `index.html` — marcação da página (painel de etapas, prévias, barra de baixar, "Já feitos").
@@ -53,5 +66,10 @@ Sempre rode `npm test` depois de mudar algo e antes de dizer que terminou.
 
 ## Publicar de volta no claude.ai (opcional)
 
-A versão publicada no claude.ai é um único HTML com os arquivos `model/`, `vendor/` ao lado. Se for
-publicar de novo por lá, junte CSS e JS no HTML na mesma ordem do `index.html` e mantenha os caminhos.
+A versão publicada no claude.ai é um único HTML com os arquivos `model/`, `vendor/` e `assets/` ao lado.
+Para montar: `npm run build:claude` → `dist/estudio-dormir-acordar.html` (junta CSS e JS na ordem do
+`index.html`). Publique esse arquivo com `vendor/`, `model/` e `assets/logo.jpg` como arquivos de apoio,
+e as capacidades `downloads`, `db`, `assets` e `sample` com `images: true` (as legendas mandam a foto
+da peça para o Claude descrever).
+
+Página publicada: https://claude.ai/artifact/7wV7DsHWFynfAvAZMLhFZw (atualize esta mesma, não crie outra).

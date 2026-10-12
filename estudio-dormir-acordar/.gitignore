@@ -5,3 +5,4 @@ playwright-report/
 tests/fixtures/modelo*.jpg
 tests/fixtures/modelo*.png
 .node/
+dist/
