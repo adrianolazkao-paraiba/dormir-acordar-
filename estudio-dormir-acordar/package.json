@@ -1,0 +1,18 @@
+{
+  "name": "estudio-dormir-acordar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Estúdio de conteúdo da Dormir & Acordar: transforma fotos e vídeos em posts para Instagram, TikTok, TikTok Shop, Pinterest e marketplaces.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "playwright test",
+    "test:ver": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

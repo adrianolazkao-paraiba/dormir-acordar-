@@ -1,0 +1,141 @@
+"use strict";
+/* ============ Interface ============ */
+function photoNumber(it){ return S.items.filter(i=>i.kind==="photo"&&!i.example).indexOf(it)+1; }
+function renderPair(){
+  const it=S.sel, box=$("pairBox"), others=S.items.filter(o=>o!==it && o.kind==="photo" && !o.example);
+  box.hidden = !(it && it.kind==="photo" && !it.example && others.length);
+  if(box.hidden) return;
+  const sel=$("pairSel"); sel.innerHTML="";
+  const o0=document.createElement("option"); o0.value=""; o0.textContent="Só esta foto"; sel.appendChild(o0);
+  for(const o of others){ const op=document.createElement("option"); op.value=o.id; op.textContent="Costas: Foto "+photoNumber(o)+" ("+o.name.slice(0,24)+")"; sel.appendChild(op); }
+  sel.value = backOf(it) ? String(it.pair.id) : "";
+  $("pairLabels").checked=S.pairLabels;
+}
+function renderItems(){
+  const box=$("items"); box.innerHTML="";
+  for(const it of S.items){
+    const b=document.createElement("button"); b.type="button"; b.className="item"+(it===S.sel?" on":""); b.setAttribute("aria-label",(it.kind==="video"?"Vídeo ":"Foto ")+it.name); b.setAttribute("aria-pressed",it===S.sel);
+    const th=canvas(128,160), g=th.getContext("2d");
+    if(it.kind==="video"){ try{ drawCover(g,it.el,it.w,it.h,128,160,newAdj(),false); }catch(e){ g.fillStyle=C.navy; g.fillRect(0,0,128,160); } }
+    else if(it.example){ g.drawImage(sceneCanvas("studio",128,160),0,0); const L=subjectLayout(it,128,160,{},null); g.drawImage(it.cut,L.x,L.y,it.cut.width*L.s,it.cut.height*L.s); }
+    else drawCover(g,it.src,it.w,it.h,128,160,newAdj(),false);
+    b.appendChild(th);
+    const tag=document.createElement("span"); tag.className="tag";
+    tag.textContent= it.example?"Exemplo": it.kind==="video"? fmtTime(it.dur)+" s" : backOf(it)? "F + C" : isBackOfAnother(it)? "Costas" : "Foto "+(photoNumber(it)); b.appendChild(tag);
+    if(it.cutState==="working"||it.cutState==="queued"){ const st=document.createElement("span"); st.className="st"; st.textContent=it.cutState==="working"?"Recortando":"Na fila"; b.appendChild(st); }
+    if(!it.example){ const x=document.createElement("span"); x.className="x"; x.textContent="×"; x.setAttribute("role","button"); x.setAttribute("aria-label","Remover "+it.name);
+      x.addEventListener("click",e=>{ e.stopPropagation(); removeItem(it); }); b.appendChild(x); }
+    b.addEventListener("click",()=>select(it));
+    box.appendChild(b);
+  }
+  const ph=S.items.filter(i=>i.kind==="photo"&&!i.example).length, vd=S.items.filter(i=>i.kind==="video").length;
+  $("itemHint").innerHTML = S.items[0]&&S.items[0].example
+    ? "Mostrando um <strong>exemplo ilustrado</strong>. Envie suas fotos e vídeos para trocar."
+    : `<strong>${ph}</strong> foto${ph===1?"":"s"} e <strong>${vd}</strong> vídeo${vd===1?"":"s"}. Toque em um item para ver e ajustar.`;
+}
+function renderScenesThumbs(){
+  for(const cv of document.querySelectorAll('#scenes canvas[data-scene]')){ const id=cv.dataset.scene, p=photoImgs[id]; if(p&&p.ok){ const g=cv.getContext("2d"); g.clearRect(0,0,120,150); g.drawImage(sceneCanvas(id,120,150),0,0); } }
+  if(typeof renderMarkChips==="function") renderMarkChips();
+}
+function renderScenes(){
+  const box=$("scenes"); if(!box.childElementCount){
+    for(const sc of SCENES){
+      const b=document.createElement("button"); b.type="button"; b.className="scene"; b.dataset.id=sc.id; b.setAttribute("role","radio");
+      const cv=canvas(120,150); const g=cv.getContext("2d");
+      if(sc.id==="original"){ g.fillStyle="#C9B9A0"; g.fillRect(0,0,120,150); g.fillStyle="#A8977C"; g.fillRect(0,96,120,54); g.fillStyle="#E7DCC8"; g.fillRect(12,14,40,58); }
+      else if(sc.id==="custom"){ g.fillStyle="#E6DCCB"; g.fillRect(0,0,120,150); g.strokeStyle=C.navy; g.lineWidth=2; g.setLineDash([5,4]); g.strokeRect(10,10,100,130); g.setLineDash([]); g.fillStyle=C.navy; g.font=`500 30px ${F.sans}`; g.textAlign="center"; g.fillText("+",60,86); }
+      else g.drawImage(sceneCanvas(sc.id,120,150),0,0);
+      cv.dataset.scene=sc.id;
+      const sp=document.createElement("span"); sp.textContent=sc.name;
+      b.append(cv,sp);
+      b.addEventListener("click",()=>{
+        if(sc.id==="custom" && !S.customBg){ $("customBg").click(); return; }
+        S.scene=sc.id; savePrefs(); onSceneChange();
+      });
+      box.appendChild(b);
+    }
+  }
+  for(const b of box.children){ const on=b.dataset.id===S.scene; b.classList.toggle("on",on); b.setAttribute("aria-checked",on); }
+  $("customBgBtn").hidden = S.scene!=="custom";
+  const v=S.sel&&S.sel.kind==="video";
+  $("sceneHint").textContent = v ? "Vídeos mantêm o cenário gravado. O cenário escolhido vale para as fotos." : "Nas fotos, a modelo é recortada no próprio aparelho e colocada no cenário. A foto não sai do seu celular ou computador.";
+}
+function onSceneChange(){ renderScenes(); if(needsCut()) S.items.forEach(queueCut); schedule(); }
+function syncAdj(){
+  const it=S.sel; if(!it) return;
+  $("adjSize").value=it.adj.size; $("adjX").value=it.adj.x; $("adjY").value=it.adj.y;
+  $("oSize").textContent=it.adj.size+"%"; $("oX").textContent=it.adj.x; $("oY").textContent=it.adj.y;
+  const v=it.kind==="video"; $("trimRow").hidden=!v; $("player").hidden=!v; $("vidPosField").hidden=!v;
+  if(v){ const t=$("trim"); t.max=Math.max(0,(it.dur-1)).toFixed(1); t.value=it.trim; $("oTrim").textContent=fmtTime(it.trim)+" s"; }
+}
+function formatsFor(it){ return FORMATS.filter(f=>f.media.includes(it.kind)); }
+let cards=new Map();
+function renderGrid(){
+  const grid=$("grid"); grid.innerHTML=""; cards.clear();
+  const it=S.sel; if(!it){ grid.innerHTML='<p class="empty">Envie uma foto ou vídeo para começar.</p>'; return; }
+  for(const fmt of formatsFor(it)){
+    const card=document.createElement("article"); card.className="card";
+    const plat=document.createElement("div"); plat.className="plat"; plat.textContent=fmt.plat;
+    const nm=document.createElement("div"); nm.className="nm"; nm.textContent=fmt.name;
+    const frame=document.createElement("div"); frame.className="frame";
+    const cv=canvas(10,10); cv.style.aspectRatio=fmt.w+"/"+fmt.h; frame.appendChild(cv);
+    const zones=document.createElement("div"); zones.className="zones"; frame.appendChild(zones);
+    const warn=document.createElement("div"); warn.className="warn"; warn.hidden=true; frame.appendChild(warn);
+    const meta=document.createElement("div"); meta.className="meta";
+    const dur = it.kind==="video" ? " · "+fmtTime(fmt.maxDur? Math.min(fmt.maxDur,it.dur-it.trim) : it.dur-it.trim)+" s" : "";
+    meta.innerHTML=`<span>${fmt.w} × ${fmt.h} · ${fmt.ratio}${dur}</span><span>${it.kind==="video"?"MP4":"JPG"}</span>`;
+    const note=document.createElement("p"); note.className="note"; note.textContent=fmt.note||"";
+    const foot=document.createElement("div"); foot.className="foot";
+    const inc=document.createElement("label"); inc.className="check"; const cb=document.createElement("input"); cb.type="checkbox"; cb.id="inc-"+fmt.id; cb.checked=S.include.has(fmt.id);
+    cb.addEventListener("change",()=>{ cb.checked?S.include.add(fmt.id):S.include.delete(fmt.id); if(needsCut()) S.items.forEach(queueCut); renderDock(); });
+    inc.append(cb,document.createTextNode(" No pacote"));
+    foot.appendChild(inc);
+    if(it.kind==="photo"){ const dl=document.createElement("button"); dl.type="button"; dl.className="btn ghost sm"; dl.textContent="Baixar"; dl.addEventListener("click",()=>downloadOne(it,fmt)); foot.appendChild(dl); }
+    card.append(plat,nm,frame,meta,note,foot);
+    grid.appendChild(card);
+    cards.set(fmt.id,{cv,zones,warn,fmt});
+    drawZones(zones,fmt);
+  }
+}
+function drawZones(el,fmt){
+  el.innerHTML=""; if(!S.zones) return;
+  if(fmt.vertical){
+    const add=(st,label)=>{ const z=document.createElement("div"); z.className="z"; Object.assign(z.style,st); if(label){ const b=document.createElement("b"); b.textContent=label; z.appendChild(b);} el.appendChild(z); };
+    add({left:0,right:0,top:0,height:(SAFE_V.t*100)+"%"},"Topo do app");
+    add({left:0,right:0,bottom:0,height:(SAFE_V.b*100)+"%"},"Legenda e carrinho");
+    add({right:0,top:"45%",bottom:(SAFE_V.b*100)+"%",width:(SAFE_V.icons*100)+"%"},"");
+  }
+  if(fmt.grid34){ const cut=(1-(3/4)/(4/5))/2; // post 4:5 mostrado em 3:4 no perfil perde um pouco das laterais
+    const g=document.createElement("div"); g.className="g34"; Object.assign(g.style,{left:(cut*100)+"%",right:(cut*100)+"%"}); el.appendChild(g);
+  }
+}
+let rafPending=false;
+function schedule(){ if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{ rafPending=false; drawPreviews(); }); }
+function drawPreviews(){
+  const it=S.sel; if(!it) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const t = it.kind==="video" ? it.el.currentTime : null;
+  for(const {cv,warn,fmt} of cards.values()){
+    const cssW=cv.clientWidth||240, w=Math.min(fmt.w,Math.round(cssW*dpr)), h=Math.round(w*fmt.h/fmt.w);
+    if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+    const endAt = it.kind==="video" ? (fmt.maxDur? Math.min(it.trim+fmt.maxDur,it.dur) : it.dur) : null;
+    const msg=renderFormat(cv.getContext("2d"),w,h,it,fmt,t,endAt);
+    warn.hidden=!msg; if(msg) warn.textContent=msg;
+  }
+}
+function renderDock(){
+  const it=S.sel, acts=$("dockActs"); acts.innerHTML="";
+  const photos=S.items.filter(i=>i.kind==="photo" && !isBackOfAnother(i)), vids=S.items.filter(i=>i.kind==="video");
+  const pf=FORMATS.filter(f=>f.media.includes("photo")&&S.include.has(f.id)).length;
+  const vf=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)).length;
+  const n=photos.length*pf;
+  if(it && it.kind==="video"){
+    $("sum").innerHTML=`<b>${vf} vídeo${vf===1?"":"s"} deste item</b><span>Gravados em tempo real: deixe esta tela aberta até terminar.</span>`;
+    const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="makeVideos"; b.textContent=S.busy?"Gerando…":"Gerar vídeos"; b.disabled=S.busy||!vf; b.addEventListener("click",()=>makeVideos(it)); acts.appendChild(b);
+    const c=document.createElement("button"); c.className="btn sec"; c.type="button"; c.textContent="Salvar capa do Reels"; c.disabled=S.busy; c.addEventListener("click",()=>saveCover(it)); acts.appendChild(c);
+  } else {
+    $("sum").innerHTML=`<b>${n} ${n===1?"imagem":"imagens"} no pacote</b><span>${photos.length} foto${photos.length===1?"":"s"} × ${pf} formato${pf===1?"":"s"}${vids.length?" · vídeos são gerados ao abrir cada vídeo":""}</span>`;
+    const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="zipAll"; b.textContent=S.busy?"Preparando…":"Baixar tudo (.zip)"; b.disabled=S.busy||!n; b.addEventListener("click",zipPhotos); acts.appendChild(b);
+  }
+}
+function renderAll(){ renderItems(); renderPair(); renderScenes(); syncAdj(); renderGrid(); renderDock(); renderPlayIcon(); schedule(); }
