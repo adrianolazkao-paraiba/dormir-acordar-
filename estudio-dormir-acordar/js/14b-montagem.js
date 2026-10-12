@@ -75,7 +75,7 @@ async function runMontage(o){
 async function makeMontage(){
   const src=montageSource(); if(S.busy || !src) return;
   const mime=pickMime(); if(mime===null){ toast("Este navegador não grava vídeo. Use Chrome, Edge ou Safari atualizado."); return; }
-  const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+  let ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
   S.busy=true; await stopPreview(); stopPlayback(); renderDock(); updateMontageCard(); progress(0);
   const box=$("results"); box.innerHTML=""; const v=src.vid.el;
   try{
@@ -92,17 +92,19 @@ async function makeMontage(){
       const done=new Promise(r=>rec.onstop=()=>r(new Blob(chunks,{type:(rec.mimeType||mime||"video/webm").split(";")[0]})));
       v.muted=!audioTrack; v.volume=1;
       if(MONT.card) MONT.card.gen.textContent=`Gravando ${k+1} de ${fmts.length}…`;
-      await runMontage({src, fmt, c, onStart:()=>rec.start(1000), onProg:p=>progress((k+p)/fmts.length)});
+      await runMontage({src, fmt, c, onStart:()=>rec.start(1000), onProg:p=>progress((k+p)/fmts.length*.9)});
       rec.stop(); stream.getTracks().forEach(tr=>tr.stop());
       recMime=recMime||rec.mimeType;
       out.push({name:`dormir-acordar_${slug(S.P.name)}_${String(Math.max(1,photoNumber(src.front))).padStart(2,"0")}_video-montagem_${fmt.id}.${ext}`, blob:await done, fmt});
     }
     v.muted=true;
+    if(MONT.card) MONT.card.gen.textContent="Preparando MP4…";
+    const padrao=await standardize(out, p=>progress(.9+p*.1)); if(padrao) ext="mp4";
     for(const o of out){ // guarda em Já feitos com a capa da frente e costas
       const cc=canvas(432,o.fmt.h*432/o.fmt.w); renderFormat(cc.getContext("2d"),cc.width,cc.height,src.front,o.fmt,null,null);
       keep(o.blob, Object.assign(metaFor(src.front,o.fmt,ext,o.name),{tipo:"video", formatoNome:"Vídeo frente + costas + vídeo · "+o.fmt.ratio}), await toBlob(cc,"image/jpeg",.82));
     }
-    showResults(out, ext, /avc1|h264/i.test(recMime||mime), box, `Vídeo pronto (${fmtTime(plan.total)} s)`, "video-montagem");
+    showResults(out, ext, padrao || /avc1|h264/i.test(recMime||mime), box, `Vídeo pronto (${fmtTime(plan.total)} s)`, "video-montagem");
   }catch(e){
     console.warn(e); toast("A gravação parou antes do fim. Deixe esta tela aberta e tente de novo.");
   } finally { S.busy=false; progress(null); v.muted=true; if(src.vid.audioGain) src.vid.audioGain.gain.value=1; renderDock(); updateMontageCard(); drawMontageStill(); }

@@ -47,7 +47,9 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
     `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
 - `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
   Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
-- `vendor/` — onnxruntime-web 1.20.1 e JSZip 3.10.1 (cópias locais, funciona offline).
+- `vendor/` — onnxruntime-web 1.20.1, JSZip 3.10.1 e Mediabunny 1.60.0 (MPL-2.0; cópias locais, funciona offline).
+  Mediabunny converte o vídeo gravado (MP4 fragmentado, às vezes VP9/Opus) em MP4 padrão H.264 + AAC com o índice
+  no começo (`toStandardMp4` em `14-video.js`): sem isso o WhatsApp recusa o vídeo como "formato incomum".
 - `assets/logo.jpg` — logo oficial (céu azul-noite, horizonte em areia, PIJAMAS).
 
 ## Regras do produto (não quebrar)
@@ -60,6 +62,9 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   (`SAFE_V`); os pés ficam acima da faixa de legenda e carrinho.
 - **Fotos principais do TikTok Shop e dos marketplaces:** fundo branco, sem texto, sem logo, sem marca d'água.
 - **Vídeo do TikTok Shop:** no máximo 15 s.
+- **Vídeos baixados:** sempre MP4 padrão (H.264 + AAC, arquivo inteiro), que abre no WhatsApp, Instagram e iPhone.
+- **Plano de cada formato:** Feed 4:5 e quadrado 1:1 com marca e texto em cima e peça grande embaixo (`mode:"stack"`),
+  como o 9:16 e o Pinterest; o dono reprovou o texto em coluna ao lado com as fotos pequenas.
 - **Frente e costas automáticas:** a 1ª foto enviada é a frente e a 2ª as costas (3ª frente, 4ª costas…). Nos 6 espaços
   de foto as duas aparecem lado a lado, frente à esquerda (inclusive nas fotos de fundo branco). "Inverter frente e costas" troca.
 - **7º espaço (foto de frente aberta + vídeo enviado):** vídeo frente (3 s) → costas (3 s) → vídeo → cartão da marca,
@@ -74,7 +79,7 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
 
 A versão publicada no claude.ai é um único HTML com os arquivos `model/`, `vendor/` e `assets/` ao lado.
 Para montar: `npm run build:claude` → `dist/estudio-dormir-acordar.html` (junta CSS e JS na ordem do
-`index.html`). Publique esse arquivo com `vendor/`, `model/` e `assets/logo.jpg` como arquivos de apoio,
+`index.html`). Publique esse arquivo com `vendor/` (inclusive `vendor/mediabunny/mediabunny.min.mjs` como text/javascript), `model/` e `assets/logo.jpg` como arquivos de apoio,
 e as capacidades `downloads`, `db`, `assets` e `sample` com `images: true` (as legendas mandam a foto
 da peça para o Claude descrever).
 

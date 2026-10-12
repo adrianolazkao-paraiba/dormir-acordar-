@@ -129,7 +129,8 @@ function textBlock(width, unit, mode){
 }
 function planArt(W,H,fmt,isVideo){
   const safe=fmt.safe||{t:.06,b:.06,l:.07,r:.07};
-  const unit=Math.min(W,H*.8), mode = H/W>1.3 ? "stack" : "side", gap=unit*.04;
+  // cada formato escolhe o seu plano: "stack" = marca e texto em cima, peça grande embaixo (Feed, quadrado, 9:16, Pinterest)
+  const unit=Math.min(W,H*.8), mode = fmt.mode || (H/W>1.3 ? "stack" : "side"), gap=unit*.04;
   const textOn = !!fmt.text && S.layout!=="none";
   const xL=W*safe.l, xR=W-W*(fmt.vertical? .07 : safe.r), yT=H*safe.t, yB=H*(1-safe.b);
   const ms = fmt.logo ? markSize(W,mode) : null;

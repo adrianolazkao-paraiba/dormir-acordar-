@@ -139,6 +139,20 @@ test("frente e costas automáticas e vídeo frente + costas + vídeo (7º espaç
   expect(nomes.join(" ")).toMatch(/video-montagem_vertical\.(mp4|webm).*video-montagem_feed\.(mp4|webm)/);
 });
 
+test("MP4 padrão para WhatsApp: MP4 fragmentado vira MP4 inteiro H.264 + AAC", async ({ page }) => {
+  // o navegador grava MP4 fragmentado (o WhatsApp recusa como "formato incomum"); o estúdio reorganiza o arquivo
+  const r = await page.evaluate(async () => {
+    const entrada = await (await fetch("tests/fixtures/fragmentado-h264.mp4")).blob();
+    const saida = await toStandardMp4(entrada);
+    const caixas = b => { const d = new DataView(b), o = []; for (let i = 0; i < d.byteLength - 8;) { const s = d.getUint32(i); o.push(String.fromCharCode(...new Uint8Array(b, i + 4, 4))); i += s >= 8 ? s : d.byteLength; } return o; };
+    return { antes: caixas(await entrada.arrayBuffer()), depois: caixas(await saida.arrayBuffer()), tipo: saida.type, semSom: saida.semSom };
+  });
+  expect(r.antes).toContain("moof");
+  expect(r.depois).toEqual(["ftyp", "moov", "mdat"]); // inteiro, índice no começo
+  expect(r.tipo).toBe("video/mp4");
+  expect(r.semSom).toBe(false);
+});
+
 test("arquivo quebrado avisa e não entra na lista", async ({ page }) => {
   await page.setInputFiles("#file", { name: "quebrado.jpg", mimeType: "image/jpeg", buffer: Buffer.from("não é imagem") });
   await expect(page.locator("#toast")).toContainText("Não consegui abrir");

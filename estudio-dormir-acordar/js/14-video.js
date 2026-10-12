@@ -33,7 +33,7 @@ async function makeVideos(it){
   if(S.busy) return;
   const fmts=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)); if(!fmts.length) return;
   const mime=pickMime(); if(mime===null){ toast("Este navegador não grava vídeo. Use Chrome, Edge ou Safari atualizado."); return; }
-  const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+  let ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
   S.busy=true; await stopPreview(); stopPlayback(); renderDock(); progress(0);
   const v=it.el; const res=$("results"); res.innerHTML="";
   try{
@@ -59,7 +59,7 @@ async function makeVideos(it){
         const t=v.currentTime;
         for(const j of jobs){ if(j.stopped) continue; renderFormat(j.ctx,j.fmt.w,j.fmt.h,it,j.fmt,t,j.end);
           if(t>=j.end-0.02||v.ended){ j.stopped=true; j.rec.stop(); j.stream.getTracks().forEach(tr=>tr.stop()); } }
-        progress((t-start)/(maxEnd-start)); $("scrub").value=Math.round(t/(it.dur||1)*1000); $("time").textContent=fmtTime(t)+" / "+fmtTime(it.dur)+" s";
+        progress((t-start)/(maxEnd-start)*.9); $("scrub").value=Math.round(t/(it.dur||1)*1000); $("time").textContent=fmtTime(t)+" / "+fmtTime(it.dur)+" s";
         if(jobs.every(j=>j.stopped)){ v.pause(); resolve(); return; }
         v.requestVideoFrameCallback ? v.requestVideoFrameCallback(step) : requestAnimationFrame(step);
       };
@@ -69,11 +69,13 @@ async function makeVideos(it){
     v.onended=null; v.muted=true;
     const blobs=await Promise.all(jobs.map(j=>j.done));
     const out=jobs.map((j,i)=>({name:fileName(it,j.fmt,S.items.filter(x=>x.kind==="video").indexOf(it)+1,ext), blob:blobs[i], fmt:j.fmt}));
+    $("makeVideos").textContent="Preparando MP4…";
+    const padrao=await standardize(out, p=>progress(.9+p*.1)); if(padrao) ext="mp4";
     for(const o of out){ // guarda cada vídeo com uma capa para a lista
       const cc=canvas(432,o.fmt.h*432/o.fmt.w); renderFormat(cc.getContext("2d"),cc.width,cc.height,it,o.fmt,start+.6,null);
       keep(o.blob, metaFor(it,o.fmt,ext,o.name), await toBlob(cc,"image/jpeg",.82));
     }
-    showResults(out, ext, /avc1|h264/i.test(jobs[0].rec.mimeType||mime));
+    showResults(out, ext, padrao || /avc1|h264/i.test(jobs[0].rec.mimeType||mime));
   }catch(e){
     console.warn(e); toast("A gravação parou antes do fim. Deixe esta tela aberta e tente de novo.");
   } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); drawPreviews(); }
@@ -108,4 +110,37 @@ async function saveCover(it){
   renderFormat(c.getContext("2d"),fmt.w,fmt.h,it,fmt,null,null);
   const name=`dormir-acordar_${slug(S.P.name)}_capa-reels.jpg`, blob=await toBlob(c,"image/jpeg",.92);
   if(await saveFile(name, blob)) keep(blob, Object.assign(metaFor(it,fmt,"jpg",name),{formatoNome:"Capa do Reels"}));
+}
+
+/* ============ MP4 padrão (WhatsApp, Instagram, iPhone) ============
+   O navegador grava em MP4 "fragmentado" (e às vezes com VP9/Opus), que o WhatsApp recusa como "formato incomum".
+   Depois de gravar, o vídeo é convertido no próprio aparelho para H.264 + AAC, MP4 inteiro com o índice no começo.
+   Se o vídeo já vier em H.264/AAC, só reorganiza o arquivo (rápido, sem perder qualidade). */
+let mediabunnyP=null;
+function loadMediabunny(){
+  return mediabunnyP || (mediabunnyP=import(new URL("vendor/mediabunny/mediabunny.min.mjs",document.baseURI).href).catch(e=>{ mediabunnyP=null; throw e; }));
+}
+async function toStandardMp4(blob, onProg){
+  const M=await loadMediabunny();
+  const input=new M.Input({source:new M.BlobSource(blob), formats:M.ALL_FORMATS});
+  const target=new M.BufferTarget();
+  const output=new M.Output({format:new M.Mp4OutputFormat({fastStart:"in-memory"}), target});
+  const conv=await M.Conversion.init({input, output, showWarnings:false, video:{codec:"avc"}, audio:{codec:"aac"}});
+  if(!conv.isValid) throw new Error("conversão: "+conv.discardedTracks.map(d=>d.reason).join(","));
+  if(onProg) conv.onProgress=p=>onProg(p);
+  await conv.execute();
+  const out=new Blob([target.buffer],{type:"video/mp4"});
+  out.semSom=conv.discardedTracks.some(d=>d.track.isAudioTrack());
+  return out;
+}
+/* converte a lista de vídeos prontos; se não der, mantém o original e avisa */
+async function standardize(out, onProg){
+  let ok=0, semSom=false;
+  for(const [i,o] of out.entries()){
+    try{ const b=await toStandardMp4(o.blob, p=>onProg&&onProg((i+p)/out.length)); o.blob=b; o.name=o.name.replace(/\.(webm|mp4)$/,".mp4"); ok++; semSom=semSom||b.semSom; }
+    catch(e){ console.warn("MP4 padrão", e); }
+  }
+  if(ok<out.length) toast("Não consegui converter para o MP4 padrão neste navegador. Se o WhatsApp recusar, gere no Chrome ou Safari atualizado.");
+  else if(semSom) toast("Vídeo convertido sem o som: este navegador não converte o áudio.");
+  return ok===out.length;
 }
