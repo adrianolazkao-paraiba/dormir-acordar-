@@ -22,6 +22,13 @@ O recorte da modelo usa 4 arquivos grandes (`isnet-w8.part0.dat.wasm` a `isnet-w
 que precisam ficar dentro da pasta `model/`. Se vieram separados, descompacte e coloque os 4 lá.
 Sem eles o app funciona, mas não troca o fundo das fotos.
 
+## Abrir no Mac com dois cliques
+
+Clique duas vezes em **`Abrir Estudio.command`**. Na primeira vez o macOS pode bloquear:
+clique com o botão direito no arquivo → **Abrir** → **Abrir**. Se o Node.js não estiver
+instalado, o próprio arquivo baixa uma cópia só para esta pasta (sem senha), liga o estúdio
+e abre o navegador. Deixe a janela do Terminal aberta enquanto usa.
+
 ## Rodar no seu computador
 
 Precisa do [Node.js](https://nodejs.org) 18 ou mais novo.

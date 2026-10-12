@@ -4,3 +4,4 @@ playwright-report/
 .DS_Store
 tests/fixtures/modelo*.jpg
 tests/fixtures/modelo*.png
+.node/
