@@ -1,0 +1,95 @@
+# Estúdio Dormir & Acordar — guia para o Claude Code
+
+App web (HTML, CSS e JavaScript puro, sem build) que transforma fotos e vídeos de pijamas da marca
+**Dormir & Acordar** em posts prontos para Instagram, Reels/Stories, TikTok, TikTok Shop, Pinterest
+e marketplaces (Shopee, Mercado Livre). O dono é o Adriano, fala português do Brasil; responda e
+escreva textos de interface em português do Brasil.
+
+## Como rodar
+
+- `npm start` → abre em http://localhost:5173 (servidor simples em `server.mjs`, sem dependências).
+- `npm test` → testes de ponta a ponta com Playwright (primeira vez: `npm install` e `npx playwright install chromium`).
+- O teste de recorte só roda se existir `tests/fixtures/modelo.jpg` (foto de modelo; não vai para o git).
+
+Sempre rode `npm test` depois de mudar algo e antes de dizer que terminou.
+
+## Regra do dono para toda entrega (obrigatória)
+
+Antes de entregar qualquer tarefa ou link para o Adriano:
+
+1. **Revise o código 3 vezes**, e a cada revisão melhore o que achar (bugs, compatibilidade com
+   iPhone/iPad/Safari, acabamento visual, mensagens para o usuário).
+2. **Teste cada componente na prática**, não só os testes automáticos: use o estúdio como uma pessoa
+   usaria (enviar foto real de modelo, recorte, cenários, marcas, textos, baixar arte, .zip, vídeo,
+   "Já feitos"), em tela de computador, iPhone (390×844) e iPad (820×1180, em pé e deitado), e
+   **olhe as imagens geradas** para conferir o resultado.
+3. Só depois disso entregue o acesso, dizendo o que foi testado e o que não deu para testar
+   (por exemplo, Safari de verdade no iPhone).
+
+## Estrutura
+
+- `index.html` — marcação da página (painel de etapas, prévias, barra de baixar, "Já feitos").
+- `css/estudio.css` — estilos. Cores em variáveis no `:root`, com modo escuro.
+- `js/` — scripts clássicos carregados em ordem pelo `index.html` (compartilham variáveis globais;
+  a ordem importa). Cada arquivo é uma parte:
+  - `00-plataforma.js` — no claude.ai a página recebe `window.claude` (downloads, db, assets, sample).
+    Rodando local, este arquivo cria uma versão equivalente: downloads diretos e "Já feitos" guardado
+    no navegador (IndexedDB). Legendas (sample) ficam desligadas localmente.
+  - `01-marca.js` cores e fontes da marca, logo · `02-formatos.js` medidas e regras de cada plataforma
+  - `03-cenarios-lista.js` lista de cenários (suporta cenário por foto: campo `photo`, `fs` = altura onde começa o chão, `fx` = centro)
+  - `04-estado.js` estado `S` e preferências salvas · `05-utilidades.js` funções de apoio
+  - `06-cenarios-desenho.js` cenários desenhados no canvas e estrelas do logo
+  - `07-exemplo.js` pijama ilustrado de exemplo · `08-recorte.js` recorte da modelo com ONNX (ISNet) no navegador
+  - `09-composicao.js` plano da arte (espaço do texto, da marca e da modelo), monograma D&A, renderização de cada formato
+  - `10-frente-costas.js` · `11-itens.js` · `12-interface.js` · `13-exportacao.js` (JPG/.zip)
+  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` painel "Vídeo da peça" (montagem frente → costas → vídeo → cartão e "só o vídeo"),
+    gravação em fila (um formato por vez) e prévia com linha do tempo ·
+    `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
+- `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
+  Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
+- `vendor/` — onnxruntime-web 1.20.1, JSZip 3.10.1 e Mediabunny 1.60.0 (MPL-2.0; cópias locais, funciona offline).
+  Mediabunny converte o vídeo gravado (MP4 fragmentado, às vezes VP9/Opus) em MP4 padrão H.264 + AAC com o índice
+  no começo (`toStandardMp4` em `14-video.js`): sem isso o WhatsApp recusa o vídeo como "formato incomum".
+- `assets/logo.jpg` — logo oficial (céu azul-noite, horizonte em areia, PIJAMAS).
+
+## Regras do produto (não quebrar)
+
+- **Identidade:** azul-noite `#33356B`, areia `#F1E8D4`, dourado `#D2A967`; fontes Fraunces (títulos) e Inter (texto).
+  Nunca preto ou branco puros na interface. O logo não deve ser redesenhado.
+- **A modelo nunca fica embaixo do texto ou da marca.** `planArt()` reserva o espaço do texto e da marca;
+  a modelo é encaixada no espaço livre. Cabeça e pés sempre inteiros.
+- **Vertical 9:16:** texto, preço e marca fora das áreas cobertas pela interface do TikTok/Instagram
+  (`SAFE_V`); os pés ficam acima da faixa de legenda e carrinho.
+- **Fotos principais do TikTok Shop e dos marketplaces:** fundo branco, sem texto, sem logo, sem marca d'água.
+- **Vídeo do TikTok Shop:** no máximo 15 s.
+- **Vídeos baixados:** sempre MP4 padrão (H.264 + AAC, arquivo inteiro), que abre no WhatsApp, Instagram e iPhone.
+- **Plano de cada formato:** Feed 4:5 e quadrado 1:1 com marca e texto em cima e peça grande embaixo (`mode:"stack"`),
+  como o 9:16 e o Pinterest; o dono reprovou o texto em coluna ao lado com as fotos pequenas.
+- **Frente e costas automáticas:** a 1ª foto enviada é a frente e a 2ª as costas (3ª frente, 4ª costas…). Nos 6 espaços
+  de foto as duas aparecem lado a lado, frente à esquerda (inclusive nas fotos de fundo branco). "Inverter frente e costas" troca.
+- **Barra do Material:** para cada peça, só 3 itens: Frente, Frente e costas, Costas (`barEntries()`; `S.mode` "pair"/"single").
+  Frente e Costas mostram só aquela foto nos 6 espaços; Frente e costas mostra as duas lado a lado. Vídeos só aparecem
+  na barra quando não há fotos (modo só vídeo).
+- **Painel "Vídeo da peça"** (só no item Frente e costas, com vídeo enviado), com cara de editor profissional: prévia 9:16/4:5
+  com play e linha do tempo (Frente 3 s | Costas 3 s | Vídeo | Cartão 2 s), ajustes (Começar em, texto no topo/embaixo,
+  cartão), lista "O que gerar" (Montagem 9:16 e 4:5; Só o vídeo Feed, Reels, TikTok Shop ≤15 s) e um botão principal.
+  O pacote .zip leva as 3 versões de cada peça (frente, frente-e-costas, costas).
+- **Abaixo da prévia do vídeo:** Estilo do texto (Editorial, Etiqueta, Sem texto) e Marca, sincronizados com a lateral.
+- **Vídeo: dizeres e logo embaixo por padrão** (o dono reclamou do texto no rosto da modelo). Texto e logo numa faixa só
+  no pé do vídeo, logo lado a lado alinhado pela base; no 9:16 a faixa fica acima da área de legenda e antes da coluna de
+  botões do TikTok/Instagram. "No topo" continua como opção. As fotos não mudam (texto em cima, aprovado pelo dono).
+- **Cenário da marca:** igual ao logo (azul-noite liso, estrelas de 4 pontas e pontos, horizonte curvo em areia).
+- O dono preferiu os **cenários desenhados** às fotos geradas por IA; não troque sem ele pedir.
+- **Marcas disponíveis:** logo original, D&A com círculo, D&A sem círculo, marca d'água com e sem círculo, nenhuma.
+  O "&" é reto e do mesmo tamanho das letras.
+- Fotos e vídeos do usuário não saem do aparelho (recorte roda no navegador).
+
+## Publicar de volta no claude.ai (opcional)
+
+A versão publicada no claude.ai é um único HTML com os arquivos `model/`, `vendor/` e `assets/` ao lado.
+Para montar: `npm run build:claude` → `dist/estudio-dormir-acordar.html` (junta CSS e JS na ordem do
+`index.html`). Publique esse arquivo com `vendor/` (inclusive `vendor/mediabunny/mediabunny.min.mjs` como text/javascript), `model/` e `assets/logo.jpg` como arquivos de apoio,
+e as capacidades `downloads`, `db`, `assets` e `sample` com `images: true` (as legendas mandam a foto
+da peça para o Claude descrever).
+
+Página publicada: https://claude.ai/artifact/7wV7DsHWFynfAvAZMLhFZw (atualize esta mesma, não crie outra).

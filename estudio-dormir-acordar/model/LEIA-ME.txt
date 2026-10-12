@@ -1,0 +1,7 @@
+Coloque aqui os 4 arquivos do recorte:
+isnet-w8.part0.dat.wasm
+isnet-w8.part1.dat.wasm
+isnet-w8.part2.dat.wasm
+isnet-w8.part3.dat.wasm
+
+Eles vêm em modelo-recorte-1-de-2.zip e modelo-recorte-2-de-2.zip.
