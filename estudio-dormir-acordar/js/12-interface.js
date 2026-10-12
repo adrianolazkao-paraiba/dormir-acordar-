@@ -2,8 +2,9 @@
 /* ============ Interface ============ */
 function photoNumber(it){ return S.items.filter(i=>i.kind==="photo"&&!i.example).indexOf(it)+1; }
 function renderPair(){
-  const it=viewItem(), box=$("pairBox"), others=S.items.filter(o=>o!==it && o.kind==="photo" && !o.example);
-  box.hidden = !(it && it.kind==="photo" && !it.example && others.length);
+  const it=S.sel, box=$("pairBox"), others=S.items.filter(o=>o!==it && o.kind==="photo" && !o.example);
+  // aparece na frente (ou foto sem par); na foto de costas não, para não ligar costas às costas
+  box.hidden = !(it && it.kind==="photo" && !it.example && others.length && !isBackOfAnother(it));
   if(box.hidden) return;
   const sel=$("pairSel"); sel.innerHTML="";
   const o0=document.createElement("option"); o0.value=""; o0.textContent="Só esta foto"; sel.appendChild(o0);
@@ -12,29 +13,45 @@ function renderPair(){
   $("pairSwap").hidden = !backOf(it);
   $("pairLabels").checked=S.pairLabels;
 }
+/* barra do Material: para cada peça, 3 itens — Frente, Frente e costas, Costas. Foto sem par: 1 item.
+   Vídeos só aparecem na barra quando não há fotos (senão ficam no painel "Vídeo da peça"). */
+function barEntries(){
+  const ph=S.items.filter(i=>i.kind==="photo"), out=[];
+  for(const p of ph){
+    if(p.example){ out.push({item:p, mode:"single", tag:"Exemplo"}); continue; }
+    if(isBackOfAnother(p)) continue;
+    const b=backOf(p);
+    if(b) out.push({item:p, mode:"single", tag:"Frente"}, {item:p, mode:"pair", tag:"Frente e costas", back:b}, {item:b, mode:"single", tag:"Costas"});
+    else out.push({item:p, mode:"single", tag:"Foto "+photoNumber(p)});
+  }
+  if(!ph.some(i=>!i.example)) for(const v of S.items.filter(i=>i.kind==="video")) out.push({item:v, mode:"single", tag:fmtTime(v.dur)+" s"});
+  return out;
+}
+function entryOn(e){ return e.item===S.sel && (e.mode==="pair") === showPair(); }
 function renderItems(){
   const box=$("items"); box.innerHTML="";
-  for(const it of S.items){
-    const b=document.createElement("button"); b.type="button"; b.className="item"+(it===S.sel?" on":""); b.setAttribute("aria-label",(it.kind==="video"?"Vídeo ":"Foto ")+it.name); b.setAttribute("aria-pressed",it===S.sel);
-    const th=canvas(128,160), g=th.getContext("2d");
-    if(it.kind==="video"){ try{ drawCover(g,it.el,it.w,it.h,128,160,newAdj(),false); }catch(e){ g.fillStyle=C.navy; g.fillRect(0,0,128,160); } }
-    else if(it.example){ g.drawImage(sceneCanvas("studio",128,160),0,0); const L=subjectLayout(it,128,160,{},null); g.drawImage(it.cut,L.x,L.y,it.cut.width*L.s,it.cut.height*L.s); }
-    else drawCover(g,it.src,it.w,it.h,128,160,newAdj(),false);
+  for(const e of barEntries()){
+    const it=e.item, on=entryOn(e);
+    const b=document.createElement("button"); b.type="button"; b.className="item"+(e.mode==="pair"?" duo":"")+(on?" on":""); b.setAttribute("aria-pressed",on); b.setAttribute("aria-label",e.tag+(it.kind==="video"?" · vídeo":""));
+    const W=e.mode==="pair"?256:128, th=canvas(W,160), g=th.getContext("2d");
+    const cover=(x,p)=>{ if(p.kind==="video"){ try{ drawCover(g,p.el,p.w,p.h,128,160,newAdj(),false); }catch(err){ g.fillStyle=C.navy; g.fillRect(0,0,128,160); } return; }
+      g.save(); g.translate(x,0); if(p.example){ g.drawImage(sceneCanvas("studio",128,160),0,0); const L=subjectLayout(p,128,160,{},null); g.drawImage(p.cut,L.x,L.y,p.cut.width*L.s,p.cut.height*L.s); } else drawCover(g,p.src,p.w,p.h,128,160,newAdj(),false); g.restore(); };
+    cover(0,it); if(e.back){ cover(128,e.back); g.fillStyle="rgba(241,232,212,.95)"; g.fillRect(127,0,2,160); }
     b.appendChild(th);
-    const tag=document.createElement("span"); tag.className="tag";
-    tag.textContent= it.example?"Exemplo": it.kind==="video"? fmtTime(it.dur)+" s" : backOf(it)? "Frente" : isBackOfAnother(it)? "Costas" : "Foto "+(photoNumber(it)); b.appendChild(tag);
-    if(it.cutState==="working"||it.cutState==="queued"){ const st=document.createElement("span"); st.className="st"; st.textContent=it.cutState==="working"?"Recortando":"Na fila"; b.appendChild(st); }
-    if(!it.example){ const x=document.createElement("span"); x.className="x"; x.textContent="×"; x.setAttribute("role","button"); x.setAttribute("aria-label","Remover "+it.name);
-      x.addEventListener("click",e=>{ e.stopPropagation(); removeItem(it); }); b.appendChild(x); }
-    b.addEventListener("click",()=>select(it));
+    const tag=document.createElement("span"); tag.className="tag"; tag.textContent=e.tag; b.appendChild(tag);
+    const busy=[it,e.back].find(p=>p&&(p.cutState==="working"||p.cutState==="queued"));
+    if(busy){ const st=document.createElement("span"); st.className="st"; st.textContent=busy.cutState==="working"?"Recortando":"Na fila"; b.appendChild(st); }
+    if(!it.example && e.mode!=="pair"){ const x=document.createElement("span"); x.className="x"; x.textContent="×"; x.setAttribute("role","button"); x.setAttribute("aria-label","Remover "+e.tag+" ("+it.name+")");
+      x.addEventListener("click",ev=>{ ev.stopPropagation(); removeItem(it); }); b.appendChild(x); }
+    b.addEventListener("click",()=>select(it,e.mode));
     box.appendChild(b);
   }
   const ph=S.items.filter(i=>i.kind==="photo"&&!i.example).length, vd=S.items.filter(i=>i.kind==="video").length;
   $("itemHint").innerHTML = S.items[0]&&S.items[0].example
     ? "Mostrando um <strong>exemplo ilustrado</strong>. Envie suas fotos e vídeos para trocar."
-    : `<strong>${ph}</strong> foto${ph===1?"":"s"} e <strong>${vd}</strong> vídeo${vd===1?"":"s"}. Toque em um item para ver e ajustar.`
-      + (ph>1 ? " A 1ª foto é a frente e a 2ª as costas (e assim por diante)." : "")
-      + (ph>1&&vd ? " Abra a foto de frente para ver o <strong>vídeo frente + costas + vídeo</strong>." : "");
+    : `<strong>${ph}</strong> foto${ph===1?"":"s"} e <strong>${vd}</strong> vídeo${vd===1?"":"s"}.`
+      + (ph>1 ? " A 1ª foto é a frente e a 2ª as costas (e assim por diante)." : " Toque em um item para ver e ajustar.")
+      + (ph>1&&vd ? " O vídeo fica em <strong>Frente e costas</strong>, abaixo das fotos." : "");
 }
 function renderScenesThumbs(){
   for(const cv of document.querySelectorAll('#scenes canvas[data-scene]')){ const id=cv.dataset.scene, p=photoImgs[id]; if(p&&p.ok){ const g=cv.getContext("2d"); g.clearRect(0,0,120,150); g.drawImage(sceneCanvas(id,120,150),0,0); } }
@@ -93,13 +110,13 @@ function renderGrid(){
     cb.addEventListener("change",()=>{ cb.checked?S.include.add(fmt.id):S.include.delete(fmt.id); if(needsCut()) S.items.forEach(queueCut); renderDock(); });
     inc.append(cb,document.createTextNode(" No pacote"));
     foot.appendChild(inc);
-    if(it.kind==="photo"){ const dl=document.createElement("button"); dl.type="button"; dl.className="btn ghost sm"; dl.textContent="Baixar"; dl.addEventListener("click",()=>downloadOne(it,fmt)); foot.appendChild(dl); }
+    if(it.kind==="photo"){ const dl=document.createElement("button"); dl.type="button"; dl.className="btn ghost sm"; dl.textContent="Baixar"; dl.addEventListener("click",()=>downloadOne(it,fmt,viewOpt())); foot.appendChild(dl); }
     card.append(plat,nm,frame,meta,note,foot);
     grid.appendChild(card);
     cards.set(fmt.id,{cv,zones,warn,fmt});
     drawZones(zones,fmt);
   }
-  if(it.kind==="photo") montageCard(grid); // 7º espaço: vídeo frente + costas + vídeo
+  videoPanel(); // painel "Vídeo da peça" (só no item Frente e costas, com vídeo enviado)
 }
 function drawZones(el,fmt){
   el.innerHTML=""; if(!S.zones) return;
@@ -123,28 +140,27 @@ function drawPreviews(){
     const cssW=cv.clientWidth||240, w=Math.min(fmt.w,Math.round(cssW*dpr)), h=Math.round(w*fmt.h/fmt.w);
     if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
     const endAt = it.kind==="video" ? (fmt.maxDur? Math.min(it.trim+fmt.maxDur,it.dur) : it.dur) : null;
-    const msg=renderFormat(cv.getContext("2d"),w,h,it,fmt,t,endAt);
+    const msg=renderFormat(cv.getContext("2d"),w,h,it,fmt,t,endAt,it.kind==="photo"?viewOpt():undefined);
     warn.hidden=!msg; if(msg) warn.textContent=msg;
   }
-  if(it.kind==="photo") drawMontageStill();
+  if(it.kind==="photo") drawVideoStill();
 }
 function renderDock(){
   const it=S.sel, acts=$("dockActs"); acts.innerHTML="";
-  const photos=S.items.filter(i=>i.kind==="photo" && !isBackOfAnother(i)), vids=S.items.filter(i=>i.kind==="video");
+  const pecas=S.items.filter(i=>i.kind==="photo" && !isBackOfAnother(i));
   const pf=FORMATS.filter(f=>f.media.includes("photo")&&S.include.has(f.id)).length;
   const vf=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)).length;
-  const n=photos.length*pf;
+  const n=pecas.reduce((a,p)=>a+(backOf(p)?3:1),0)*pf; // frente, frente e costas, costas
   if(it && it.kind==="video"){
-    $("sum").innerHTML=`<b>${vf} vídeo${vf===1?"":"s"} deste item</b><span>Gravados em tempo real: deixe esta tela aberta até terminar.</span>`;
+    $("sum").innerHTML=`<b>${vf} vídeo${vf===1?"":"s"} deste item</b><span>Gravados um de cada vez: deixe esta tela aberta até terminar.</span>`;
     const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="makeVideos"; b.textContent=S.busy?"Gerando…":"Gerar vídeos"; b.disabled=S.busy||!vf; b.addEventListener("click",()=>makeVideos(it)); acts.appendChild(b);
-    const peca=S.items.find(i=>i.kind==="photo" && !i.example && backOf(i));
-    if(peca){ const m=document.createElement("button"); m.className="btn sec"; m.type="button"; m.id="goMontage"; m.textContent="Vídeo frente + costas"; m.disabled=S.busy;
-      m.addEventListener("click",()=>{ MONT.video=it.id; select(peca); setTimeout(()=>{ const c=document.querySelector(".mcard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },200); }); acts.appendChild(m); }
     const c=document.createElement("button"); c.className="btn sec"; c.type="button"; c.textContent="Salvar capa do Reels"; c.disabled=S.busy; c.addEventListener("click",()=>saveCover(it)); acts.appendChild(c);
   } else {
-    $("sum").innerHTML=`<b>${n} ${n===1?"imagem":"imagens"} no pacote</b><span>${photos.length} foto${photos.length===1?"":"s"} × ${pf} formato${pf===1?"":"s"}${montageSource()?" · + vídeo frente, costas e vídeo":vids.length?" · vídeos são gerados ao abrir cada vídeo":""}</span>`;
+    const comPar=pecas.some(p=>backOf(p));
+    $("sum").innerHTML=`<b>${n} ${n===1?"imagem":"imagens"} no pacote</b><span>${pecas.length} peça${pecas.length===1?"":"s"}${comPar?" (frente, frente e costas, costas)":""} × ${pf} formato${pf===1?"":"s"}</span>`;
     const b=document.createElement("button"); b.className="btn"; b.type="button"; b.id="zipAll"; b.textContent=S.busy?"Preparando…":"Baixar tudo (.zip)"; b.disabled=S.busy||!n; b.addEventListener("click",zipPhotos); acts.appendChild(b);
-    if(montageSource()){ const m=document.createElement("button"); m.className="btn sec"; m.type="button"; m.id="dockMontage"; m.textContent="Gerar vídeo"; m.title="Vídeo: frente + costas + vídeo (9:16 e 4:5)"; m.disabled=S.busy; m.addEventListener("click",()=>{ const c=document.querySelector(".mcard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); makeMontage(); }); acts.appendChild(m); }
+    if(montageSource()){ const m=document.createElement("button"); m.className="btn sec"; m.type="button"; m.id="dockVideo"; m.textContent="Vídeos"; m.title="Ir para o painel Vídeo da peça"; m.disabled=S.busy;
+      m.addEventListener("click",()=>$("vpanel").scrollIntoView({behavior:"smooth",block:"start"})); acts.appendChild(m); }
   }
 }
 function renderAll(){ renderItems(); renderPair(); renderScenes(); syncAdj(); renderGrid(); renderDock(); renderPlayIcon(); schedule(); }

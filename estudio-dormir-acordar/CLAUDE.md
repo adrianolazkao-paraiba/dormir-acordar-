@@ -42,8 +42,8 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   - `07-exemplo.js` pijama ilustrado de exemplo · `08-recorte.js` recorte da modelo com ONNX (ISNet) no navegador
   - `09-composicao.js` plano da arte (espaço do texto, da marca e da modelo), monograma D&A, renderização de cada formato
   - `10-frente-costas.js` · `11-itens.js` · `12-interface.js` · `13-exportacao.js` (JPG/.zip)
-  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` 7º espaço na tela das fotos: vídeo frente → costas → vídeo → cartão
-    (3 s por foto, zoom lento, transição de 0,4 s), em 9:16 e 4:5; grava um formato por vez (vários ao mesmo tempo engasgam o celular) ·
+  - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` painel "Vídeo da peça" (montagem frente → costas → vídeo → cartão e "só o vídeo"),
+    gravação em fila (um formato por vez) e prévia com linha do tempo ·
     `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
 - `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
   Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
@@ -67,8 +67,13 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   como o 9:16 e o Pinterest; o dono reprovou o texto em coluna ao lado com as fotos pequenas.
 - **Frente e costas automáticas:** a 1ª foto enviada é a frente e a 2ª as costas (3ª frente, 4ª costas…). Nos 6 espaços
   de foto as duas aparecem lado a lado, frente à esquerda (inclusive nas fotos de fundo branco). "Inverter frente e costas" troca.
-- **7º espaço (foto de frente aberta + vídeo enviado):** vídeo frente (3 s) → costas (3 s) → vídeo → cartão da marca,
-  em 9:16 e 4:5. Estilo de texto (Editorial, Etiqueta, Sem texto), cenário e marca iguais aos das fotos.
+- **Barra do Material:** para cada peça, só 3 itens: Frente, Frente e costas, Costas (`barEntries()`; `S.mode` "pair"/"single").
+  Frente e Costas mostram só aquela foto nos 6 espaços; Frente e costas mostra as duas lado a lado. Vídeos só aparecem
+  na barra quando não há fotos (modo só vídeo).
+- **Painel "Vídeo da peça"** (só no item Frente e costas, com vídeo enviado), com cara de editor profissional: prévia 9:16/4:5
+  com play e linha do tempo (Frente 3 s | Costas 3 s | Vídeo | Cartão 2 s), ajustes (Começar em, texto no topo/embaixo,
+  cartão), lista "O que gerar" (Montagem 9:16 e 4:5; Só o vídeo Feed, Reels, TikTok Shop ≤15 s) e um botão principal.
+  O pacote .zip leva as 3 versões de cada peça (frente, frente-e-costas, costas).
 - **Cenário da marca:** igual ao logo (azul-noite liso, estrelas de 4 pontas e pontos, horizonte curvo em areia).
 - O dono preferiu os **cenários desenhados** às fotos geradas por IA; não troque sem ele pedir.
 - **Marcas disponíveis:** logo original, D&A com círculo, D&A sem círculo, marca d'água com e sem círculo, nenhuma.

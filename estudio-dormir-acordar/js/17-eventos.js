@@ -15,8 +15,8 @@ function bind(){
   for(const [id,k] of Object.entries(fields)){ const el=$(id); el.value=S.P[k]||""; el.addEventListener("input",()=>{ S.P[k]=el.value; savePrefs(); schedule(); }); }
   for(const b of $("layoutSeg").children){ b.addEventListener("click",()=>{ S.layout=b.dataset.v; savePrefs(); renderSegs(); schedule(); }); }
   for(const b of $("markSeg").children) b.addEventListener("click",()=>{ S.mark=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
-  for(const b of $("vidPosSeg").children) b.addEventListener("click",()=>{ S.vidPos=b.dataset.v; savePrefs(); renderSegs(); schedule(); });
-  $("endCard").checked=S.endCard; $("endCard").addEventListener("change",e=>{ S.endCard=e.target.checked; savePrefs(); updateMontageCard(); schedule(); });
+  for(const b of $("vidPosSeg").children) b.addEventListener("click",()=>{ S.vidPos=b.dataset.v; savePrefs(); renderSegs(); videoPanel(); schedule(); });
+  $("endCard").checked=S.endCard; $("endCard").addEventListener("change",e=>{ S.endCard=e.target.checked; savePrefs(); videoPanel(); schedule(); });
   $("showZones").addEventListener("change",e=>{ S.zones=e.target.checked; for(const c of cards.values()) drawZones(c.zones,c.fmt); });
   $("playBtn").addEventListener("click",togglePlay);
   $("scrub").addEventListener("input",e=>{ const it=S.sel; if(!it||it.kind!=="video") return; seek(e.target.value/1000*it.dur); it.el.addEventListener("seeked",()=>{ tick(); },{once:true}); });

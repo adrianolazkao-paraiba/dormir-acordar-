@@ -29,56 +29,15 @@ function pickMime(){
   const opts=["video/mp4;codecs=avc1.640028,mp4a.40.2","video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4;codecs=avc1,mp4a.40.2","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
   if(!window.MediaRecorder) return null; return opts.find(m=>{ try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } })||"";
 }
+/* modo só vídeo (quando não há fotos): os formatos de vídeo marcados, um de cada vez, pela mesma fila do painel */
 async function makeVideos(it){
   if(S.busy) return;
   const fmts=FORMATS.filter(f=>f.media.includes("video")&&S.include.has(f.id)); if(!fmts.length) return;
-  const mime=pickMime(); if(mime===null){ toast("Este navegador não grava vídeo. Use Chrome, Edge ou Safari atualizado."); return; }
-  let ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
-  S.busy=true; await stopPreview(); stopPlayback(); renderDock(); progress(0);
-  const v=it.el; const res=$("results"); res.innerHTML="";
-  try{
-    const audioTrack=await videoAudioTrack(it);
-    const start=it.trim||0;
-    const jobs=fmts.map(fmt=>{
-      const c=canvas(fmt.w,fmt.h), ctx=c.getContext("2d");
-      const stream=c.captureStream(30); if(audioTrack) stream.addTrack(audioTrack.clone());
-      const rec=new MediaRecorder(stream, Object.assign({videoBitsPerSecond:9_000_000, audioBitsPerSecond:160_000}, mime?{mimeType:mime}:{}));
-      const chunks=[]; rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
-      const end=Math.min(it.dur, fmt.maxDur? start+fmt.maxDur : it.dur);
-      const done=new Promise(r=>rec.onstop=()=>r(new Blob(chunks,{type:(rec.mimeType||mime||"video/webm").split(";")[0]})));
-      return {fmt,c,ctx,rec,stream,end,done,stopped:false};
-    });
-    v.loop=false; v.muted=!audioTrack; v.volume=1; // o som vai só para a gravação, não para o alto-falante
-    await new Promise(r=>{ const t=setTimeout(()=>{ v.onseeked=null; r(); },1500); v.onseeked=()=>{ clearTimeout(t); v.onseeked=null; r(); }; v.currentTime=start; });
-    for(const j of jobs) renderFormat(j.ctx,j.fmt.w,j.fmt.h,it,j.fmt,start,j.end);
-    for(const j of jobs) j.rec.start(1000);
-    const maxEnd=Math.max(...jobs.map(j=>j.end));
-    await v.play().catch(()=>{ v.muted=true; return v.play(); }); // Safari: grava sem som se não deixar tocar com som
-    await new Promise(resolve=>{
-      const step=()=>{
-        const t=v.currentTime;
-        for(const j of jobs){ if(j.stopped) continue; renderFormat(j.ctx,j.fmt.w,j.fmt.h,it,j.fmt,t,j.end);
-          if(t>=j.end-0.02||v.ended){ j.stopped=true; j.rec.stop(); j.stream.getTracks().forEach(tr=>tr.stop()); } }
-        progress((t-start)/(maxEnd-start)*.9); $("scrub").value=Math.round(t/(it.dur||1)*1000); $("time").textContent=fmtTime(t)+" / "+fmtTime(it.dur)+" s";
-        if(jobs.every(j=>j.stopped)){ v.pause(); resolve(); return; }
-        v.requestVideoFrameCallback ? v.requestVideoFrameCallback(step) : requestAnimationFrame(step);
-      };
-      v.onended=()=>{ for(const j of jobs) if(!j.stopped){ j.stopped=true; j.rec.stop(); j.stream.getTracks().forEach(tr=>tr.stop()); } v.pause(); resolve(); };
-      step();
-    });
-    v.onended=null; v.muted=true;
-    const blobs=await Promise.all(jobs.map(j=>j.done));
-    const out=jobs.map((j,i)=>({name:fileName(it,j.fmt,S.items.filter(x=>x.kind==="video").indexOf(it)+1,ext), blob:blobs[i], fmt:j.fmt}));
-    $("makeVideos").textContent="Preparando MP4…";
-    const padrao=await standardize(out, p=>progress(.9+p*.1)); if(padrao) ext="mp4";
-    for(const o of out){ // guarda cada vídeo com uma capa para a lista
-      const cc=canvas(432,o.fmt.h*432/o.fmt.w); renderFormat(cc.getContext("2d"),cc.width,cc.height,it,o.fmt,start+.6,null);
-      keep(o.blob, metaFor(it,o.fmt,ext,o.name), await toBlob(cc,"image/jpeg",.82));
-    }
-    showResults(out, ext, padrao || /avc1|h264/i.test(jobs[0].rec.mimeType||mime));
-  }catch(e){
-    console.warn(e); toast("A gravação parou antes do fim. Deixe esta tela aberta e tente de novo.");
-  } finally { S.busy=false; progress(null); v.muted=true; if(it.audioGain) it.audioGain.gain.value=1; renderDock(); drawPreviews(); }
+  const idx=S.items.filter(x=>x.kind==="video").indexOf(it)+1;
+  const jobs=fmts.map(f=>({tipo:"c", fmt:f.id, vid:it, nome:fileName(it,f,idx,"x").replace(/\.x$/,"")}));
+  await recordQueue(jobs, { results:$("results"),
+    busy:()=>{ const b=$("makeVideos"); if(b){ b.disabled=S.busy; b.textContent=S.busy?"Gerando…":"Gerar vídeos"; } },
+    status:t=>{ const b=$("makeVideos"); if(b && t) b.textContent=t.length>28? t.slice(0,26)+"…" : t; } });
 }
 /* som do vídeo só para a gravação (o alto-falante fica mudo enquanto grava) */
 async function videoAudioTrack(it){
@@ -100,7 +59,7 @@ function showResults(out, ext, h264, box, title, zipTag){
   h.appendChild(all); res.appendChild(h);
   for(const o of out){
     const r=document.createElement("div"); r.className="res";
-    r.innerHTML=`<span><b>${o.fmt.plat}</b> · ${o.fmt.name} · ${(o.blob.size/1048576).toFixed(1).replace(".",",")} MB</span>`;
+    r.innerHTML=`<span>${o.rotulo || `<b>${o.fmt.plat}</b> · ${o.fmt.name}`} · ${(o.blob.size/1048576).toFixed(1).replace(".",",")} MB</span>`;
     const b=document.createElement("button"); b.className="btn ghost sm"; b.type="button"; b.textContent="Baixar"; b.addEventListener("click",()=>saveFile(o.name,o.blob)); r.appendChild(b); res.appendChild(r);
   }
   res.scrollIntoView({behavior:"smooth",block:"nearest"});

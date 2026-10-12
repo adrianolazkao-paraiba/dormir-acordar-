@@ -2,7 +2,7 @@
 /* ============ Estado ============ */
 const DEFAULT_P = { name:"Pijama Longo Floral", price:"189,90", old:"", eyebrow:"Nova coleção", cta:"Compre pelo link da bio" };
 const S = {
-  items:[], sel:null, scene:"studio", layout:"editorial", mark:"logo", vidPos:"top", endCard:true, pairLabels:true, zones:true,
+  items:[], sel:null, mode:"pair", scene:"studio", layout:"editorial", mark:"logo", vidPos:"top", endCard:true, pairLabels:true, zones:true,
   P:{...DEFAULT_P}, include:new Set(FORMATS.map(f=>f.id)), customBg:null, busy:false
 };
 function loadPrefs(){

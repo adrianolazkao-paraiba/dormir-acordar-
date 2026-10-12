@@ -59,14 +59,14 @@ async function addFiles(files){
   const front=p=>S.items.find(o=>o!==p && o.pair===p && o.kind==="photo") || p;
   const newPhoto=S.items.find(i=>i.kind==="photo" && !i.example && i.id>=firstNewId);
   const pairs=S.items.filter(i=>i.kind==="photo" && !i.example && backOf(i));
-  const vidOnly=firstNew && firstNew.kind==="video" && !newPhoto;
-  if(newPhoto) select(front(newPhoto));
-  else if(vidOnly && pairs.length){ // vídeo novo para uma peça que já tem frente e costas: mostra o 7º espaço
-    const cur=viewItem(); select(cur && cur.kind==="photo" && backOf(cur) ? cur : pairs[0]);
-    toast("Vídeo adicionado. O vídeo frente + costas + vídeo está no último espaço.");
-    setTimeout(()=>{ const c=document.querySelector(".mcard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },300);
+  const vidNew=S.items.some(i=>i.kind==="video" && i.id>=firstNewId);
+  if(newPhoto) select(front(newPhoto),"pair"); // abre a peça no item "Frente e costas"
+  else if(vidNew && pairs.length){ // vídeo novo para uma peça com frente e costas: abre a peça e mostra o painel de vídeo
+    const cur=S.sel && S.sel.kind==="photo" && backOf(S.sel) ? S.sel : pairs[0]; select(cur,"pair");
+    toast("Vídeo adicionado. Ele está no painel “Vídeo da peça”, abaixo das fotos.");
+    setTimeout(()=>{ const c=$("vpanel"); if(c && !c.hidden) c.scrollIntoView({behavior:"smooth",block:"start"}); },300);
   }
-  else if(firstNew) select(firstNew);
+  else if(firstNew) select(firstNew, firstNew.kind==="photo"?"pair":"single");
   renderAll();
 }
 /* frente e costas automáticas pela ordem de envio: 1ª foto = frente, 2ª = costas, 3ª = frente, 4ª = costas…
@@ -82,17 +82,17 @@ function autoPair(){
 }
 /* troca quem é frente e quem é costas (a ordem das fotos escolhidas no celular nem sempre é a esperada) */
 function swapPair(){
-  const f=viewItem(), b=f&&backOf(f); if(!b) return;
+  const f=S.items.find(o=>o.kind==="photo" && ((o===S.sel && backOf(o)) || o.pair===S.sel)), b=f&&backOf(f); if(!b) return;
   stopPreview(); f.pair=null; b.pair=f;
   const i=S.items.indexOf(f), j=S.items.indexOf(b); S.items[i]=b; S.items[j]=f; // a nova frente vem antes
-  select(b);
+  select(b,"pair");
 }
 function removeItem(it){
   stopPreview(); stopPlayback();
   if(it.url) URL.revokeObjectURL(it.url);
   S.items=S.items.filter(x=>x!==it); S.items.forEach(o=>{ if(o.pair===it) o.pair=null; });
   if(!S.items.length) addExample();
-  if(S.sel===it) S.sel=S.items[0];
+  if(S.sel===it){ S.sel=S.items.find(i=>i.kind==="photo" && !isBackOfAnother(i)) || S.items[0]; S.mode="pair"; }
   renderAll();
 }
-function select(it){ stopPreview(); stopPlayback(); S.sel=it; syncAdj(); renderAll(); }
+function select(it, mode){ stopPreview(); stopPlayback(); S.sel=it; S.mode=mode||"pair"; syncAdj(); renderAll(); }
