@@ -26,6 +26,9 @@
       <h1>Dormir &amp; Acordar</h1>
       <p>Sua foto ou vídeo vira post de Instagram, TikTok, TikTok Shop, Pinterest e marketplace, nas medidas certas.</p>
     </div>
+    <button class="btn install" type="button" id="installBtn" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M12 7.5v7m0 0l-3-3m3 3l3-3"/></svg>
+      Instalar app</button>
   </header>
 
   <div class="app">
@@ -155,6 +158,16 @@
   <div class="prog" id="progWrap" hidden><i id="prog"></i></div>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="sheet-bg" id="installSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <img src="assets/icone-180.png" alt="" class="sheet-ico">
+    <h2 id="installTitle">Instalar o Estúdio como app</h2>
+    <p class="hint">O app fica com o ícone na tela de início e abre em tela cheia, como qualquer aplicativo.</p>
+    <ol class="steps" id="installSteps"></ol>
+    <p class="hint" id="installNote"></p>
+    <button class="btn" type="button" id="installOk">Entendi</button>
+  </div>
+</div>
 
 <script src="vendor/jszip.min.js"></script>
 <script src="vendor/ort/ort.wasm.min.js"></script>
@@ -178,5 +191,6 @@
 <script src="js/16-legendas.js"></script>
 <script src="js/17-eventos.js"></script>
 <script src="js/18-inicio.js"></script>
+<script src="js/19-instalar.js"></script>
 </body>
 </html>

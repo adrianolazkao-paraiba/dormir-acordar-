@@ -44,13 +44,19 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   - `10-frente-costas.js` · `11-itens.js` · `12-interface.js` · `13-exportacao.js` (JPG/.zip)
   - `14-video.js` gravação de vídeo com MediaRecorder · `14b-montagem.js` painel "Vídeo da peça" (montagem frente → costas → vídeo → cartão e "só o vídeo"),
     gravação em fila (um formato por vez) e prévia com linha do tempo ·
-    `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js`
+    `15-ja-feitos.js` histórico · `16-legendas.js` · `17-eventos.js` · `18-inicio.js` ·
+    `19-instalar.js` botão "Instalar app" (pedido do Chrome no Android; passo a passo do Safari no iPhone/iPad) e registro do `sw.js`
 - `model/` — modelo de recorte ISNet (pesos em 8 bits, cálculo em precisão total), dividido em 4 partes.
   Não troque por versão "quantizada dinâmica": ela deixava manchas no recorte.
 - `vendor/` — onnxruntime-web 1.20.1, JSZip 3.10.1 e Mediabunny 1.60.0 (MPL-2.0; cópias locais, funciona offline).
   Mediabunny converte o vídeo gravado (MP4 fragmentado, às vezes VP9/Opus) em MP4 padrão H.264 + AAC com o índice
   no começo (`toStandardMp4` em `14-video.js`): sem isso o WhatsApp recusa o vídeo como "formato incomum".
-- `assets/logo.jpg` — logo oficial (céu azul-noite, horizonte em areia, PIJAMAS).
+- `assets/logo.jpg` — logo oficial (céu azul-noite, horizonte em areia, PIJAMAS). `assets/icone-*.png` — ícones do app
+  (`icone-maskable-512.png` com margem para o recorte redondo do Android).
+- `manifest.webmanifest` + `sw.js` — app instalável (ícone na tela de início, abre em tela cheia e sem internet).
+  O `sw.js` busca HTML/CSS/JS na rede primeiro (atualizações chegam sozinhas) e guarda `model/` e `vendor/`.
+  **Ao criar um arquivo novo em `js/`, `css/` ou `assets/`, ponha na lista `BASICOS` do `sw.js`** (um teste confere).
+  Ao trocar algo em `model/` ou `vendor/`, aumente `VERSAO` no `sw.js`.
 
 ## Regras do produto (não quebrar)
 

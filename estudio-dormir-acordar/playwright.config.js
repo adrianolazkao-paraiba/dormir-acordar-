@@ -7,6 +7,7 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:5174",
     acceptDownloads: true,
+    serviceWorkers: "block", // o teste do app instalável liga de novo
     launchOptions: { args: ["--autoplay-policy=no-user-gesture-required"] },
   },
   webServer: {

@@ -82,10 +82,12 @@
   /* ---- downloads: no celular/tablet abre a tela de compartilhar (salvar em Fotos/Galeria, WhatsApp, Instagram);
      no computador, ou se o aparelho não deixar, baixa direto ---- */
   const toque = matchMedia("(pointer:coarse)").matches;
+  // app instalado no iPhone/iPad: o link de baixar não tem para onde ir, então o .zip também vai pela tela de compartilhar ("Salvar em Arquivos")
+  const instalado = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const downloads = { save: async({filename, data})=>{
     const blob = data instanceof Blob ? data : new Blob([data]);
-    if (toque && navigator.canShare && !/\.zip$/i.test(filename)) {
-      const type = blob.type || (/\.mp4$/i.test(filename) ? "video/mp4" : /\.jpe?g$/i.test(filename) ? "image/jpeg" : "application/octet-stream");
+    if (toque && navigator.canShare && (!/\.zip$/i.test(filename) || instalado())) {
+      const type = blob.type || (/\.mp4$/i.test(filename) ? "video/mp4" : /\.jpe?g$/i.test(filename) ? "image/jpeg" : /\.zip$/i.test(filename) ? "application/zip" : "application/octet-stream");
       const file = new File([blob], filename, {type});
       if (navigator.canShare({files:[file]})) {
         try { await navigator.share({files:[file]}); return { status:"saved" }; }
