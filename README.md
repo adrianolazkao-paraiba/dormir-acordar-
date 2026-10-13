@@ -8,3 +8,7 @@ A pasta [`estudio-dormir-acordar/`](estudio-dormir-acordar/) tem o estúdio de c
 
 **Abrir no celular, tablet ou computador:** https://adrianolazkao-paraiba.github.io/dormir-acordar-/estudio-dormir-acordar/
 (no iPhone/iPad: Compartilhar → Adicionar à Tela de Início; no Android: menu ⋮ → Instalar app / Adicionar à tela inicial).
+
+**App Android (funciona sem internet):** baixe no celular
+https://github.com/adrianolazkao-paraiba/dormir-acordar-/releases/latest/download/estudio-dormir-acordar.apk
+e toque no arquivo para instalar (permita "instalar apps desta fonte" se o celular pedir).
