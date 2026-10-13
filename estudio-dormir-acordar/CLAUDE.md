@@ -57,6 +57,15 @@ Antes de entregar qualquer tarefa ou link para o Adriano:
   O `sw.js` busca HTML/CSS/JS na rede primeiro (atualizações chegam sozinhas) e guarda `model/` e `vendor/`.
   **Ao criar um arquivo novo em `js/`, `css/` ou `assets/`, ponha na lista `BASICOS` do `sw.js`** (um teste confere).
   Ao trocar algo em `model/` ou `vendor/`, aumente `VERSAO` no `sw.js`.
+- `css/fontes.css` + `fonts/` — Fraunces e Inter guardadas no app (sem Google Fonts: funciona offline).
+- `app-android/` — **app Android de verdade** (Capacitor 8): o estúdio inteiro vai dentro do .apk, abre sem internet,
+  com ícone e tela de abertura. `npm run preparar` copia o estúdio para `www/` (e põe `vendor/capacitor.js` antes dos
+  scripts); no app, baixar grava o arquivo no aparelho e abre o compartilhar do Android (`salvarNativo` em
+  `00-plataforma.js`), com cópia em Documentos/Estudio DA. Ícones: `recursos/` → `npm run icones`.
+  O .apk é montado pelo GitHub (`.github/workflows/app-android.yml`; aqui o SDK do Android é bloqueado) e publicado em
+  https://github.com/adrianolazkao-paraiba/dormir-acordar-/releases/latest/download/estudio-dormir-acordar.apk
+  A assinatura (`app-android/assinatura/estudio-da.jks`) tem de ser sempre a mesma, senão o celular não atualiza por cima.
+  iPhone/iPad: app nativo exige conta Apple Developer; até lá, o app da Tela de Início (PWA) é o caminho.
 
 ## Regras do produto (não quebrar)
 

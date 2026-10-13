@@ -4,7 +4,7 @@
    instalável e abrindo sem internet. O botão "Instalar app" usa o pedido de instalação do Android/Chrome;
    no iPhone/iPad, que não tem esse pedido, mostra o passo a passo do "Adicionar à Tela de Início". */
 (function(){
-  if(!window.__local) return;
+  if(!window.__local || window.__nativo) return; // no app Android já instalado não há o que instalar
   const ua=navigator.userAgent;
   const ios=/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>0);
   const android=/Android/.test(ua);

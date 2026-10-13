@@ -1,0 +1,62 @@
+# Monta o app Android do Estúdio Dormir & Acordar (.apk) e publica para baixar no celular:
+# https://github.com/adrianolazkao-paraiba/dormir-acordar-/releases/latest/download/estudio-dormir-acordar.apk
+name: App Android
+
+on:
+  push:
+    branches: [main, claude/design-studio-files-rf873s]
+    paths: ["estudio-dormir-acordar/**", ".github/workflows/app-android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: estudio-dormir-acordar/app-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+
+      - name: Copiar o estúdio para dentro do app
+        run: npm ci && npm run preparar
+
+      - name: Montar o .apk
+        working-directory: estudio-dormir-acordar/app-android/android
+        env:
+          VERSAO_APP: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../estudio-dormir-acordar.apk
+          ls -la ../estudio-dormir-acordar.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: estudio-dormir-acordar-apk
+          path: estudio-dormir-acordar/app-android/estudio-dormir-acordar.apk
+
+      - name: Publicar para baixar no celular
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete app-android --yes --cleanup-tag || true
+          gh release create app-android estudio-dormir-acordar.apk \
+            --target "$GITHUB_SHA" --latest \
+            --title "Estúdio D&A para Android (versão 1.${{ github.run_number }})" \
+            --notes "Baixe o arquivo estudio-dormir-acordar.apk no celular Android e toque nele para instalar. Se o celular pedir, permita instalar apps desta fonte. Versões novas instalam por cima e mantêm o que já foi feito."

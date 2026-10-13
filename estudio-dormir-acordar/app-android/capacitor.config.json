@@ -1,0 +1,13 @@
+{
+  "appId": "br.com.dormiracordar.estudio",
+  "appName": "Estúdio D&A",
+  "webDir": "www",
+  "backgroundColor": "#FBF8F2",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  },
+  "plugins": {
+    "SystemBars": { "insetsHandling": "native", "initialViewportFitValueHint": "cover" }
+  }
+}

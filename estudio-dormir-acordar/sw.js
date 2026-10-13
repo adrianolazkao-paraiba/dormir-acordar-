@@ -2,12 +2,12 @@
    - Arquivos do app (HTML, CSS, JS, ícones): busca na rede primeiro, para sempre pegar a versão nova;
      sem internet, usa a cópia guardada.
    - Modelo de recorte e bibliotecas (model/, vendor/): grandes e fixos, usa a cópia guardada primeiro.
-     Ao trocar algo em model/ ou vendor/, aumente VERSAO para o celular baixar de novo.
-   - Fontes do Google: usa a cópia guardada e atualiza por trás. */
-const VERSAO = "v1";
-const APP = "estudio-app-" + VERSAO, PESADOS = "estudio-pesados-" + VERSAO, FONTES = "estudio-fontes-" + VERSAO;
+     Ao trocar algo em model/ ou vendor/, aumente VERSAO para o celular baixar de novo. */
+const VERSAO = "v2";
+const APP = "estudio-app-" + VERSAO, PESADOS = "estudio-pesados-" + VERSAO;
 const BASICOS = [
-  "./", "index.html", "manifest.webmanifest", "css/estudio.css",
+  "./", "index.html", "manifest.webmanifest", "css/estudio.css", "css/fontes.css",
+  "fonts/fraunces-latin-39ce20.woff2", "fonts/fraunces-latin-bf1253.woff2", "fonts/fraunces-latin-ext-796716.woff2", "fonts/fraunces-latin-ext-c50079.woff2", "fonts/inter-latin-567244.woff2", "fonts/inter-latin-ext-395290.woff2",
   "assets/logo.jpg", "assets/icone-180.png", "assets/icone-192.png", "assets/icone-512.png", "assets/icone-maskable-512.png",
   "js/00-plataforma.js", "js/01-marca.js", "js/02-formatos.js", "js/03-cenarios-lista.js", "js/04-estado.js",
   "js/05-utilidades.js", "js/06-cenarios-desenho.js", "js/07-exemplo.js", "js/08-recorte.js", "js/09-composicao.js",
@@ -27,7 +27,7 @@ self.addEventListener("install", e => {
 
 self.addEventListener("activate", e => {
   e.waitUntil((async () => {
-    const manter = [APP, PESADOS, FONTES];
+    const manter = [APP, PESADOS];
     for (const k of await caches.keys()) if (k.startsWith("estudio-") && !manter.includes(k)) await caches.delete(k);
     await self.clients.claim();
   })());
@@ -56,19 +56,10 @@ async function guardadoPrimeiro(req) {
   if (res.ok) cache.put(req, res.clone());
   return res;
 }
-async function fontes(req, e) {
-  const cache = await caches.open(FONTES);
-  const salvo = await cache.match(req);
-  const novo = fetch(req).then(res => { if (res.ok || res.type === "opaque") cache.put(req, res.clone()); return res; });
-  if (salvo) { e.waitUntil(novo.catch(() => {})); return salvo; }
-  return novo;
-}
-
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET" || req.headers.has("range")) return;
   const url = new URL(req.url);
-  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") { e.respondWith(fontes(req, e)); return; }
   if (url.origin !== location.origin || !url.pathname.startsWith(new URL("./", location.href).pathname)) return;
   e.respondWith(pesado(url) ? guardadoPrimeiro(req) : redePrimeiro(req));
 });

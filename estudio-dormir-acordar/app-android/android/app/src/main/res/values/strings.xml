@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Estúdio D&amp;A</string>
+    <string name="title_activity_main">Estúdio D&amp;A</string>
+    <string name="package_name">br.com.dormiracordar.estudio</string>
+    <string name="custom_url_scheme">br.com.dormiracordar.estudio</string>
+</resources>

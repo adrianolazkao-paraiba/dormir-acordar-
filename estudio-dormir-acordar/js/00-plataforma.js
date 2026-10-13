@@ -81,11 +81,33 @@
 
   /* ---- downloads: no celular/tablet abre a tela de compartilhar (salvar em Fotos/Galeria, WhatsApp, Instagram);
      no computador, ou se o aparelho não deixar, baixa direto ---- */
+  /* ---- app Android (Capacitor): o arquivo é gravado no aparelho e abre a tela de compartilhar do Android
+     (WhatsApp, Instagram, Drive, Arquivos…). Uma cópia fica em Documentos/Estudio DA. ---- */
+  const cap = window.Capacitor, nativo = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+  const plugin = n => cap.registerPlugin ? cap.registerPlugin(n) : cap.Plugins[n];
+  async function salvarNativo(filename, blob){
+    const Filesystem = plugin("Filesystem"), Share = plugin("Share");
+    const buf = new Uint8Array(await blob.arrayBuffer()), PEDACO = 3 * 1024 * 1024; // múltiplo de 3: os pedaços em base64 se juntam sem erro
+    const b64 = (i) => { let s = ""; const fim = Math.min(buf.length, i + PEDACO); for (let j = i; j < fim; j += 32768) s += String.fromCharCode.apply(null, buf.subarray(j, Math.min(fim, j + 32768))); return btoa(s); };
+    const gravar = async (directory, path) => {
+      await Filesystem.writeFile({ path, data: b64(0), directory, recursive: true });
+      for (let i = PEDACO; i < buf.length; i += PEDACO) await Filesystem.appendFile({ path, data: b64(i), directory });
+      return (await Filesystem.getUri({ path, directory })).uri;
+    };
+    const uri = await gravar("CACHE", filename);
+    gravar("DOCUMENTS", "Estudio DA/" + filename).catch(()=>{});
+    try { await Share.share({ title: filename, files: [uri], dialogTitle: "Enviar ou salvar" }); }
+    catch (e) { if (/cancel/i.test(String(e && (e.message || e)))) throw {code:"declined"}; throw e; }
+    return { status:"saved" };
+  }
+  window.__nativo = nativo;
+
   const toque = matchMedia("(pointer:coarse)").matches;
   // app instalado no iPhone/iPad: o link de baixar não tem para onde ir, então o .zip também vai pela tela de compartilhar ("Salvar em Arquivos")
   const instalado = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const downloads = { save: async({filename, data})=>{
     const blob = data instanceof Blob ? data : new Blob([data]);
+    if (nativo) return salvarNativo(filename, blob);
     if (toque && navigator.canShare && (!/\.zip$/i.test(filename) || instalado())) {
       const type = blob.type || (/\.mp4$/i.test(filename) ? "video/mp4" : /\.jpe?g$/i.test(filename) ? "image/jpeg" : /\.zip$/i.test(filename) ? "application/zip" : "application/octet-stream");
       const file = new File([blob], filename, {type});

@@ -1,0 +1,19 @@
+{
+  "name": "estudio-dormir-acordar-android",
+  "private": true,
+  "description": "App Android do Estúdio Dormir & Acordar (Capacitor): o estúdio inteiro dentro do celular, funciona sem internet.",
+  "scripts": {
+    "preparar": "node preparar.mjs && cap sync android",
+    "icones": "capacitor-assets generate --android --assetPath recursos --iconBackgroundColor '#33356B' --iconBackgroundColorDark '#33356B' --splashBackgroundColor '#33356B' --splashBackgroundColorDark '#33356B'"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.4",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.3"
+  }
+}

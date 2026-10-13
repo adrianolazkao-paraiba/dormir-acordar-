@@ -11,7 +11,9 @@ test("sw.js guarda todos os arquivos que o index.html carrega", () => {
   const html = ler("index.html"), sw = ler("sw.js");
   const usados = [...html.matchAll(/(?:src|href)="((?:js|css|assets)\/[^"]+|manifest\.webmanifest)"/g)].map(m => m[1]);
   const man = JSON.parse(ler("manifest.webmanifest"));
-  for (const f of [...usados, ...man.icons.map(i => i.src)]) expect(sw, f).toContain(`"${f}"`);
+  const fontes = [...ler("css/fontes.css").matchAll(/url\(\.\.\/(fonts\/[^)]+)\)/g)].map(m => m[1]);
+  expect(fontes.length).toBeGreaterThan(0);
+  for (const f of [...usados, ...man.icons.map(i => i.src), ...fontes]) expect(sw, f).toContain(`"${f}"`);
 });
 
 test.describe("com service worker", () => {
@@ -118,4 +120,38 @@ test("computador: botão só aparece quando o Chrome oferece instalar", async ({
   await expect(page.locator("#installBtn")).toBeHidden();
   await page.evaluate(() => { const e = new Event("beforeinstallprompt", { cancelable: true }); e.prompt = async () => {}; e.userChoice = Promise.resolve({ outcome: "dismissed" }); dispatchEvent(e); });
   await expect(page.locator("#installBtn")).toBeVisible();
+});
+
+test.describe("app Android (Capacitor)", () => {
+  test.use({ userAgent: ANDROID, viewport: { width: 412, height: 915 }, hasTouch: true, isMobile: true, serviceWorkers: "allow" });
+  test("baixar grava o arquivo inteiro no aparelho e abre o compartilhar; sem botão Instalar e sem service worker", async ({ page }) => {
+    await page.addInitScript(() => {
+      const arquivos = {}, log = window.__log = { share: [], docs: [] };
+      const fs = {
+        writeFile: async ({ path, data, directory }) => { arquivos[directory + "/" + path] = [data]; if (directory === "DOCUMENTS") log.docs.push(path); return {}; },
+        appendFile: async ({ path, data, directory }) => { arquivos[directory + "/" + path].push(data); return {}; },
+        getUri: async ({ path, directory }) => ({ uri: "file:///" + directory + "/" + path }),
+      };
+      window.__arquivo = k => arquivos[k].map(b => atob(b)).join("");
+      window.Capacitor = { isNativePlatform: () => true, registerPlugin: n => n === "Filesystem" ? fs : { share: async o => { log.share.push(o); } } };
+    });
+    const erros = []; page.on("pageerror", e => erros.push(String(e)));
+    await page.goto("/");
+    await expect(page.locator("#grid .card")).toHaveCount(6);
+    const r = await page.evaluate(async () => {
+      const bytes = new Uint8Array(7 * 1024 * 1024 + 5); for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 31) & 255; // maior que 2 pedaços
+      const dl = await window.claude.use("downloads");
+      await dl.save({ filename: "teste.mp4", data: new Blob([bytes], { type: "video/mp4" }) });
+      const s = __arquivo("CACHE/teste.mp4"); let igual = s.length === bytes.length;
+      for (let i = 0; igual && i < bytes.length; i += 9973) igual = s.charCodeAt(i) === bytes[i];
+      await new Promise(r => setTimeout(r, 50));
+      return { igual, share: __log.share, docs: __log.docs, sw: (await navigator.serviceWorker.getRegistrations()).length };
+    });
+    expect(r.igual).toBe(true);
+    expect(r.share).toEqual([{ title: "teste.mp4", files: ["file:///CACHE/teste.mp4"], dialogTitle: "Enviar ou salvar" }]);
+    expect(r.docs).toEqual(["Estudio DA/teste.mp4"]);
+    expect(r.sw).toBe(0);
+    await expect(page.locator("#installBtn")).toBeHidden();
+    expect(erros).toEqual([]);
+  });
 });
