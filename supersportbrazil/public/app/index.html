@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SuperSportBrazil – Cortador</title>
+<link rel="icon" href="/assets/logo.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/auth.js"></script>
+</head>
+<body>
+<div class="box" id="carregando"><h3>Abrindo o Cortador…</h3><p class="msg" id="msg"></p></div>
+<script>
+// O Cortador só é entregue pelo servidor para quem tem assinatura ativa (/app/cortador exige o login).
+(async()=>{
+  const m=document.getElementById('msg');
+  const s=await SSB.requireLogin(); if(!s) return;
+  try{
+    const r=await fetch('/app/cortador',{headers:{Authorization:'Bearer '+s.access_token}});
+    if(r.status===402){ location.href='/conta.html'; return; }
+    if(!r.ok) throw new Error('Não foi possível abrir ('+r.status+').');
+    const html=await r.text();
+    document.open(); document.write(html); document.close();
+  }catch(e){ m.className='msg err'; m.textContent=e.message+' Tente recarregar a página.'; }
+})();
+</script>
+</body>
+</html>

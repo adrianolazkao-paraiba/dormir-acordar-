@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Entrar – SuperSportBrazil</title>
+<link rel="icon" href="/assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/assets/site.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/auth.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="brand" href="/"><img src="/assets/logo.png" alt=""><b>SuperSport<span>Brazil</span></b></a></header>
+  <form class="box" id="form" novalidate>
+    <div class="tabs" role="tablist">
+      <button type="button" class="btn" role="tab" id="tabEntrar" aria-selected="true">Entrar</button>
+      <button type="button" class="btn" role="tab" id="tabCadastro" aria-selected="false">Criar conta</button>
+    </div>
+    <label id="nomeL" hidden>Nome<input id="nome" autocomplete="name"></label>
+    <label>E-mail<input id="email" type="email" autocomplete="email" required></label>
+    <label>Senha<input id="senha" type="password" autocomplete="current-password" minlength="8" required></label>
+    <button class="btn red" id="enviar" type="submit">Entrar</button>
+    <button class="btn" id="esqueci" type="button">Esqueci minha senha</button>
+    <p class="msg" id="msg" role="status"></p>
+    <p class="small" id="aceite" hidden>Ao criar a conta você concorda com os <a href="/termos.html">Termos de uso</a> e a <a href="/privacidade.html">Política de privacidade</a>.</p>
+  </form>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const q=new URLSearchParams(location.search); let modo=q.get('modo')==='cadastro'?'cadastro':'entrar';
+function setModo(m){ modo=m; const c=m==='cadastro';
+  $('tabEntrar').setAttribute('aria-selected',String(!c)); $('tabCadastro').setAttribute('aria-selected',String(c));
+  $('nomeL').hidden=!c; $('aceite').hidden=!c; $('esqueci').hidden=c; $('enviar').textContent=c?'Criar conta e começar 7 dias grátis':'Entrar';
+  $('senha').autocomplete=c?'new-password':'current-password'; msg(''); }
+function msg(t,ok){ const m=$('msg'); m.textContent=t; m.className='msg '+(t?(ok?'ok':'err'):''); }
+$('tabEntrar').onclick=()=>setModo('entrar'); $('tabCadastro').onclick=()=>setModo('cadastro'); setModo(modo);
+const volta=q.get('volta')||'/conta.html';
+SSB.session().then(s=>{ if(s) location.href=volta; }).catch(e=>msg(e.message));
+$('form').addEventListener('submit',async e=>{
+  e.preventDefault(); const email=$('email').value.trim(), senha=$('senha').value;
+  if(!email||!senha){ msg('Preencha e-mail e senha.'); return; }
+  if(senha.length<8){ msg('A senha precisa ter pelo menos 8 caracteres.'); return; }
+  $('enviar').disabled=true;
+  try{
+    const sb=await SSB.client();
+    if(modo==='cadastro'){
+      const {data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome:$('nome').value.trim()},emailRedirectTo:location.origin+'/conta.html'}});
+      if(error) throw error;
+      if(!data.session){ msg('Conta criada! Abra o e-mail que enviamos para confirmar e depois entre aqui.',true); return; }
+      location.href='/conta.html';
+    } else {
+      const {error}=await sb.auth.signInWithPassword({email,password:senha});
+      if(error) throw new Error(error.message.includes('Invalid')?'E-mail ou senha incorretos.':error.message);
+      location.href=volta;
+    }
+  }catch(err){ msg(err.message||'Não foi possível entrar.'); }
+  finally{ $('enviar').disabled=false; }
+});
+$('esqueci').onclick=async()=>{
+  const email=$('email').value.trim(); if(!email){ msg('Digite seu e-mail acima e clique de novo.'); return; }
+  try{ const sb=await SSB.client(); const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/conta.html?senha=nova'}); if(error) throw error;
+    msg('Enviamos um link para criar uma nova senha.',true); }catch(err){ msg(err.message); }
+};
+</script>
+</body>
+</html>
