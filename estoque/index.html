@@ -96,10 +96,20 @@ input[type=checkbox]{width:20px; height:20px; accent-color:var(--navy); vertical
 
 /* Linhas de itens (entrada/saída) */
 .itens{display:grid; gap:10px; margin:12px 0}
-.item{display:grid; gap:8px; grid-template-columns:2fr 1fr .8fr 1fr auto; align-items:start; padding:12px; border:1px dashed var(--line-strong); border-radius:var(--r-sm)}
-.item .saldo{font-size:12px; color:var(--muted); margin-top:3px; min-height:18px}
-@media (max-width:640px){ .item{grid-template-columns:1fr 1fr} .item .f-prod{grid-column:1/-1} .item .x{grid-column:2; justify-self:end; align-self:end} }
-.item > .x{margin-top:22px}
+/* Item: digita o nº do modelo; cores e tamanhos aparecem como botões (sem lista de rolagem) */
+.item{display:grid; gap:10px; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:start; padding:12px; border:1px dashed var(--line-strong); border-radius:var(--r-sm)}
+.item .f-ref{grid-column:1 / 3}
+.item .f-cor,.item .f-tam{grid-column:1 / -1}
+.item .x{grid-row:1; grid-column:3; margin-top:22px}
+.item .info{font-size:13px; color:var(--fg); margin-top:4px; min-height:18px}
+.item .info.erro{color:var(--coral)}
+.item .saldo{font-size:12px; color:var(--muted); margin-top:4px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{min-height:40px; padding:6px 12px; border-radius:999px; border:1px solid var(--line-strong); background:var(--bg); color:var(--fg); cursor:pointer; font-weight:500; font-size:14px; font-variant-numeric:tabular-nums}
+.chip small{color:var(--muted); font-weight:400; margin-left:4px}
+.chip[aria-pressed="true"]{background:var(--btn-bg); color:var(--btn-fg); border-color:transparent}
+.chip[aria-pressed="true"] small{color:inherit; opacity:.8}
+.chip:disabled{opacity:.4; cursor:not-allowed}
 .total{font-family:var(--display); font-size:22px; color:var(--fg)}
 
 /* Tamanhos (cadastro em grade) */
@@ -928,40 +938,80 @@ async function fecharEdicao() {
 }
 
 /* ---------- ENTRADA e SAÍDA (linhas de itens) ---------- */
-/* Escolha em dois passos, bom no celular: primeiro "modelo · cor", depois o tamanho. */
-const grupoDe = p => `${p.ref || ""}|${p.cat}|${p.modelo}|${p.cor}`;
-function grupos(soAtivos) {
-  const g = new Map();
-  for (const p of ordenarProdutos([...D.produtos])) {
-    if (soAtivos && p.ativo === false) continue;
-    const k = grupoDe(p);
-    if (!g.has(k)) g.set(k, { rot: `${p.ref ? p.ref + " · " : ""}${p.modelo} · ${p.cor}${p.cat === "Infantil" ? " (infantil)" : ""}`, prods: [] });
-    g.get(k).prods.push(p);
-  }
-  return g;
+/* Escolha do produto pelo nº do modelo, usando o que foi cadastrado em Produtos:
+   digita o número, toca na cor e no tamanho (botões, bom no celular). */
+const produtosAtivos = () => ordenarProdutos(D.produtos.filter(p => p.ativo !== false));
+/* Produtos que batem com o que foi digitado: o nº exato; sem nº cadastrado, pelo nome do modelo */
+function acharModelo(txt) {
+  const ref = limparRef(txt), nome = semAcento(String(txt || "").trim().toLowerCase());
+  if (!ref) return [];
+  const porRef = produtosAtivos().filter(p => p.ref === ref);
+  if (porRef.length) return porRef;
+  const semRef = produtosAtivos().filter(p => !p.ref && semAcento(p.modelo.toLowerCase()) === nome);
+  return semRef;
 }
-function novaLinha(pre) {
-  const lado = pre; // "e" ou "s"
-  const { est } = calcular(), g = grupos(true);
-  const div = document.createElement("div"); div.className = "item";
+function novaLinha(lado) {
+  const { est } = calcular();
+  const saida = lado === "s";
+  const div = document.createElement("div"); div.className = "item"; div.dataset.prod = "";
   div.innerHTML = `
-    <div class="field f-prod"><label>Produto</label><select class="g"><option value="">Escolha…</option>${[...g].map(([k, v]) => `<option value="${esc(k)}">${esc(v.rot)}</option>`).join("")}</select></div>
-    <div class="field"><label>Tamanho</label><select class="t" disabled><option value="">—</option></select><div class="saldo"></div></div>
+    <div class="field f-ref"><label>Nº do modelo</label><input class="ref" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Ex.: 2050254">
+      <div class="info"></div></div>
+    <button type="button" class="x" title="Tirar item" aria-label="Tirar item">×</button>
+    <div class="field f-cor" hidden><label>Cor</label><div class="chips cores"></div></div>
+    <div class="field f-tam" hidden><label>Tamanho <span class="sub" style="font-weight:400">(em estoque)</span></label><div class="chips tamanhos"></div><div class="saldo"></div></div>
     <div class="field"><label>Qtd.</label><input class="q" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
-    <div class="field"><label class="lu">${rotuloUnit(lado)}</label><input class="u" type="text" inputmode="decimal" placeholder="0,00"></div>
-    <button type="button" class="x" title="Tirar item" aria-label="Tirar item">×</button>`;
-  const selG = $(".g", div), selT = $(".t", div);
-  selG.onchange = () => {
-    const grp = g.get(selG.value);
-    selT.disabled = !grp;
-    selT.innerHTML = grp ? grp.prods.map(p => `<option value="${p.id}">${esc(p.tam)} · ${N(est[p.id].saldo)} un.</option>`).join("") : `<option value="">—</option>`;
-    selT.onchange();
-  };
-  selT.onchange = () => {
-    const p = prodPorId(selT.value);
-    $(".saldo", div).textContent = p ? `${p.sku} · ${N(est[p.id].saldo)} em estoque` : "";
-    if (p) $(".u", div).value = moedaTxt(lado === "e" ? ($("#eTipo").value === "compra" ? (est[p.id].cm || p.custo) : p.preco) : ($("#sTipo").value === "venda" ? p.preco : est[p.id].cm));
+    <div class="field"><label class="lu">${rotuloUnit(lado)}</label><input class="u" type="text" inputmode="decimal" placeholder="0,00"></div>`;
+  const inp = $(".ref", div), info = $(".info", div), boxCor = $(".f-cor", div), boxTam = $(".f-tam", div);
+  let achados = [], cor = "";
+  const escolherProd = id => {
+    div.dataset.prod = id || "";
+    $$(".tamanhos .chip", div).forEach(b => b.setAttribute("aria-pressed", b.dataset.id === id ? "true" : "false"));
+    const p = prodPorId(id);
+    $(".saldo", div).textContent = p ? `Código ${p.sku} · ${N(est[p.id].saldo)} em estoque` : "";
+    div.valorPadrao();
     totalItens(lado);
+  };
+  // valor unitário sugerido pelo cadastro: custo médio na compra, preço na venda e na devolução
+  div.valorPadrao = () => {
+    const p = prodPorId(div.dataset.prod); if (!p) return;
+    $(".u", div).value = moedaTxt(lado === "e" ? ($("#eTipo").value === "compra" ? (est[p.id].cm || p.custo) : p.preco) : ($("#sTipo").value === "venda" ? p.preco : est[p.id].cm));
+  };
+  const mostrarTams = () => {
+    const lista = achados.filter(p => p.cor === cor);
+    $$(".cores .chip", div).forEach(b => b.setAttribute("aria-pressed", b.dataset.cor === cor ? "true" : "false"));
+    boxTam.hidden = !lista.length;
+    $(".tamanhos", div).innerHTML = lista.map(p => `<button type="button" class="chip" data-id="${p.id}" aria-pressed="false" ${saida && est[p.id].saldo <= 0 ? "disabled" : ""}>${esc(p.tam)}<small>${N(est[p.id].saldo)}</small></button>`).join("");
+    escolherProd(lista.length === 1 && !(saida && est[lista[0].id].saldo <= 0) ? lista[0].id : "");
+  };
+  div.buscar = () => {
+    achados = acharModelo(inp.value);
+    cor = ""; div.dataset.prod = ""; $(".saldo", div).textContent = "";
+    info.classList.remove("erro");
+    if (!achados.length) {
+      boxCor.hidden = boxTam.hidden = true;
+      const ref = limparRef(inp.value);
+      // sugestões em botões para quem ainda está digitando o número
+      const parecidos = ref.length >= 2 ? [...new Map(produtosAtivos().filter(p => p.ref && p.ref.startsWith(ref)).map(p => [p.ref, p])).values()].slice(0, 6) : [];
+      if (parecidos.length) info.innerHTML = `<div class="chips">${parecidos.map(p => `<button type="button" class="chip" data-ref="${esc(p.ref)}">${esc(p.ref)}<small>${esc(p.modelo)}</small></button>`).join("")}</div>`;
+      else { info.textContent = ref.length >= 4 ? "Nº não cadastrado. Cadastre em Produtos primeiro." : ""; info.classList.toggle("erro", ref.length >= 4); }
+      totalItens(lado); return;
+    }
+    const p0 = achados[0];
+    info.textContent = `${p0.modelo}${p0.cat === "Infantil" ? " · infantil" : ""}`;
+    const cores = [...new Set(achados.map(p => p.cor))];
+    boxCor.hidden = false;
+    $(".cores", div).innerHTML = cores.map(c => `<button type="button" class="chip" data-cor="${esc(c)}" aria-pressed="false">${esc(c)}</button>`).join("");
+    if (cores.length === 1) { cor = cores[0]; mostrarTams(); } else { boxTam.hidden = true; totalItens(lado); }
+  };
+  inp.addEventListener("input", div.buscar);
+  info.addEventListener("click", e => { const b = e.target.closest("[data-ref]"); if (b) { inp.value = b.dataset.ref; div.buscar(); } });
+  $(".cores", div).addEventListener("click", e => { const b = e.target.closest("[data-cor]"); if (b) { cor = b.dataset.cor; mostrarTams(); } });
+  $(".tamanhos", div).addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b && !b.disabled) escolherProd(b.dataset.id); });
+  // escolhe um produto já conhecido (ao refazer as linhas)
+  div.definir = p => {
+    inp.value = p.ref || p.modelo; div.buscar();
+    if (achados.some(x => x.id === p.id)) { cor = p.cor; mostrarTams(); if (!$(`.tamanhos [data-id="${p.id}"]`, div)?.disabled) escolherProd(p.id); }
   };
   $(".q", div).oninput = $(".u", div).oninput = () => totalItens(lado);
   $(".x", div).onclick = () => { div.remove(); if (!$(`#${lado}Itens`).children.length) novaLinha(lado); totalItens(lado); };
@@ -973,7 +1023,7 @@ function rotuloUnit(lado) {
   return $("#sTipo").value === "venda" ? "Preço unit. (R$)" : "Custo unit. (R$)";
 }
 function lerItens(lado) {
-  return $$(`#${lado}Itens .item`).map(div => ({ prod: $(".t", div).value, qtd: parseInt($(".q", div).value) || 0, unit: numero($(".u", div).value), div })).filter(i => i.prod);
+  return $$(`#${lado}Itens .item`).map(div => ({ prod: div.dataset.prod, qtd: parseInt($(".q", div).value) || 0, unit: numero($(".u", div).value), div })).filter(i => i.prod);
 }
 function totalItens(lado) {
   const its = lerItens(lado), { est } = calcular();
@@ -996,9 +1046,9 @@ function prepararItens(lado) {
   if (!antes.length) novaLinha(lado);
   for (const i of antes) {
     const p = prodPorId(i.prod); if (!p) continue;
-    const div = novaLinha(lado), selG = $(".g", div);
-    selG.value = grupoDe(p); selG.onchange();
-    $(".t", div).value = p.id; $(".q", div).value = i.qtd; $(".u", div).value = moedaTxt(i.unit);
+    const div = novaLinha(lado);
+    div.definir(p);
+    $(".q", div).value = i.qtd; if (div.dataset.prod) $(".u", div).value = moedaTxt(i.unit);
   }
   if (!$(`#${lado}Itens`).children.length) novaLinha(lado);
   totalItens(lado);
@@ -1045,14 +1095,15 @@ function ajustarFormEntrada() {
   $("#eParteLbl").textContent = dev ? "Cliente" : "Fornecedor";
   $("#eParte").setAttribute("list", dev ? "" : "listaFornecedores");
   $("#eNfBox").hidden = !dev;
-  $$("#eItens .item").forEach(div => { $(".lu", div).textContent = rotuloUnit("e"); if ($(".t", div).value) $(".t", div).onchange(); });
+  $$("#eItens .item").forEach(div => { $(".lu", div).textContent = rotuloUnit("e"); div.valorPadrao(); });
+  totalItens("e");
 }
 function ajustarFormSaida() {
   const venda = $("#sTipo").value === "venda";
   $$("[data-so-venda]").forEach(e => e.hidden = !venda);
   $("#sTotalLbl").textContent = venda ? "Total da venda" : "Custo das peças";
   $("#sBtn").textContent = venda ? "Lançar venda" : "Lançar saída";
-  $$("#sItens .item").forEach(div => { $(".lu", div).textContent = rotuloUnit("s"); if ($(".t", div).value) $(".t", div).onchange(); });
+  $$("#sItens .item").forEach(div => { $(".lu", div).textContent = rotuloUnit("s"); div.valorPadrao(); });
   totalItens("s");
 }
 
