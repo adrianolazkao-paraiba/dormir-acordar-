@@ -218,7 +218,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
         <div class="field"><label for="pRef">Nº do modelo (do fabricante)</label>
           <input type="text" id="pRef" list="listaRefs" required placeholder="Ex.: 2050254" autocapitalize="characters" spellcheck="false"></div>
         <div class="field" style="grid-column:span 2"><label for="pModelo">Modelo</label>
-          <input type="text" id="pModelo" list="listaModelos" required placeholder="Escolha ou escreva"></div>
+          <input type="text" id="pModelo" required placeholder="Ex.: Short doll de alça"></div>
         <div class="field"><label for="pCor">Cor / estampa</label><input type="text" id="pCor" list="listaCores" required placeholder="Ex.: Rosa poá"></div>
         <div class="field"><label for="pCusto">Custo de compra (R$)</label><input type="text" inputmode="decimal" id="pCusto" placeholder="0,00" required></div>
         <div class="field"><label for="pPreco">Preço de venda (R$)</label><input type="text" inputmode="decimal" id="pPreco" placeholder="0,00" required></div>
@@ -229,7 +229,6 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
       <div class="tams" id="pTams"></div>
       <div class="row end mt"><button class="btn" type="submit">Cadastrar</button></div>
     </form>
-    <datalist id="listaModelos"></datalist>
     <datalist id="listaRefs"></datalist>
     <datalist id="listaCores"></datalist>
 
@@ -401,7 +400,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
     <h3 style="margin-bottom:12px">Editar produto</h3>
     <div class="fields">
       <div class="field"><label for="dRef">Nº do modelo (do fabricante)</label><input type="text" id="dRef" list="listaRefs" required autocapitalize="characters" spellcheck="false"></div>
-      <div class="field" style="grid-column:span 2"><label for="dModelo">Modelo</label><input type="text" id="dModelo" list="listaModelos" required></div>
+      <div class="field" style="grid-column:span 2"><label for="dModelo">Modelo</label><input type="text" id="dModelo" required></div>
       <div class="field"><label for="dCor">Cor / estampa</label><input type="text" id="dCor" list="listaCores" required></div>
       <div class="field"><label for="dTam">Tamanho</label><select id="dTam"></select></div>
       <div class="field"><label for="dCusto">Custo de cadastro (R$)</label><input type="text" inputmode="decimal" id="dCusto"></div>
@@ -444,13 +443,6 @@ const CHAVE = "da-estoque-v1";
 const CHAVE_TEMA = "da-estoque-tema";
 const TAM_ADULTO = ["PP", "P", "M", "G", "GG"];
 const TAM_INFANTIL = ["RN", "1", "2", "3", "4", "6", "8", "10", "12", "14", "16"];
-const MODELOS = [
-  "Short doll de alça", "Short doll manga curta", "Baby doll", "Camisola de alça", "Camisola manga curta",
-  "Pijama curto (blusa e short)", "Pijama americano curto (botões)", "Pijama capri", "Pijama manga curta e calça",
-  "Pijama longo (manga longa e calça)", "Pijama americano longo (botões)", "Pijama de inverno (moletinho/flanela)",
-  "Macacão pijama", "Pijama masculino curto", "Pijama masculino longo",
-  "Infantil curto", "Infantil longo", "Infantil short doll", "Infantil camisola", "Infantil macacão", "Mãe e filha (kit)"
-];
 const CANAIS = ["Loja / pronta entrega", "Instagram", "WhatsApp", "Shopee", "Mercado Livre", "TikTok Shop", "Site", "Feira / evento", "Revenda / atacado", "Outro"];
 const TIPOS = {
   inicial:   { nome: "Estoque inicial", sinal: +1 },
@@ -826,8 +818,6 @@ function rPainel() {
 
 /* ---------- PRODUTOS ---------- */
 function preencherListas() {
-  const modelos = [...new Set([...MODELOS, ...D.produtos.map(p => p.modelo)])];
-  $("#listaModelos").innerHTML = modelos.map(m => `<option value="${esc(m)}">`).join("");
   const refs = new Map(); for (const p of D.produtos) if (p.ref && !refs.has(p.ref)) refs.set(p.ref, p.modelo);
   $("#listaRefs").innerHTML = [...refs].map(([r, m]) => `<option value="${esc(r)}">${esc(m)}</option>`).join("");
   $("#listaCores").innerHTML = [...new Set(D.produtos.map(p => p.cor))].sort().map(c => `<option value="${esc(c)}">`).join("");
