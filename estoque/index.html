@@ -219,7 +219,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
           <input type="text" id="pRef" list="listaRefs" required placeholder="Ex.: 2050254" autocapitalize="characters" spellcheck="false"></div>
         <div class="field" style="grid-column:span 2"><label for="pModelo">Modelo</label>
           <input type="text" id="pModelo" required placeholder="Ex.: Short doll de alça"></div>
-        <div class="field"><label for="pCor">Cor / estampa</label><input type="text" id="pCor" list="listaCores" required placeholder="Ex.: Rosa poá"></div>
+        <div class="field"><label for="pCor">Cor / estampa</label><input type="text" id="pCor" required placeholder="Ex.: Rosa poá"></div>
         <div class="field"><label for="pCusto">Custo de compra (R$)</label><input type="text" inputmode="decimal" id="pCusto" placeholder="0,00" required></div>
         <div class="field"><label for="pPreco">Preço de venda (R$)</label><input type="text" inputmode="decimal" id="pPreco" placeholder="0,00" required></div>
         <div class="field"><label for="pMin">Estoque mínimo por tamanho</label><input type="number" inputmode="numeric" id="pMin" min="0" value="3"></div>
@@ -230,7 +230,6 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
       <div class="row end mt"><button class="btn" type="submit">Cadastrar</button></div>
     </form>
     <datalist id="listaRefs"></datalist>
-    <datalist id="listaCores"></datalist>
 
     <div class="card mt">
       <div class="row" style="justify-content:space-between; margin-bottom:10px">
@@ -401,7 +400,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
     <div class="fields">
       <div class="field"><label for="dRef">Nº do modelo (do fabricante)</label><input type="text" id="dRef" list="listaRefs" required autocapitalize="characters" spellcheck="false"></div>
       <div class="field" style="grid-column:span 2"><label for="dModelo">Modelo</label><input type="text" id="dModelo" required></div>
-      <div class="field"><label for="dCor">Cor / estampa</label><input type="text" id="dCor" list="listaCores" required></div>
+      <div class="field"><label for="dCor">Cor / estampa</label><input type="text" id="dCor" required></div>
       <div class="field"><label for="dTam">Tamanho</label><select id="dTam"></select></div>
       <div class="field"><label for="dCusto">Custo de cadastro (R$)</label><input type="text" inputmode="decimal" id="dCusto"></div>
       <div class="field"><label for="dPreco">Preço de venda (R$)</label><input type="text" inputmode="decimal" id="dPreco"></div>
@@ -820,7 +819,6 @@ function rPainel() {
 function preencherListas() {
   const refs = new Map(); for (const p of D.produtos) if (p.ref && !refs.has(p.ref)) refs.set(p.ref, p.modelo);
   $("#listaRefs").innerHTML = [...refs].map(([r, m]) => `<option value="${esc(r)}">${esc(m)}</option>`).join("");
-  $("#listaCores").innerHTML = [...new Set(D.produtos.map(p => p.cor))].sort().map(c => `<option value="${esc(c)}">`).join("");
   $("#listaFornecedores").innerHTML = [...new Set(D.movs.filter(m => m.tipo === "compra" && m.parte).map(m => m.parte))].map(c => `<option value="${esc(c)}">`).join("");
 }
 function tamanhosDe(cat) { return cat === "Infantil" ? TAM_INFANTIL : TAM_ADULTO; }
