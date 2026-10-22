@@ -4,11 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Estoque Dormir & Acordar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Controle de estoque, vendas e obrigações do MEI da Dormir & Acordar.">
 <meta name="theme-color" content="#33356B">
-<link rel="icon" href="../estudio-dormir-acordar/assets/icone-192.png">
-<link rel="apple-touch-icon" href="../estudio-dormir-acordar/assets/icone-180.png">
-<link rel="stylesheet" href="../estudio-dormir-acordar/css/fontes.css">
+<link rel="icon" href="icone.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* Cores da marca (as mesmas do Estúdio), com modo escuro */
 :root{
@@ -40,14 +43,18 @@ h3{font-size:18px}
 button,input,select,textarea{font:inherit; color:inherit}
 [hidden]{display:none!important}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.wrap{max-width:1180px; margin:0 auto; padding:0 16px 80px}
+.wrap{max-width:1180px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); padding-block:0 80px}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--bg)}
 
 /* Cabeçalho e abas */
 .top{display:flex; align-items:center; gap:14px; padding:18px 0 14px}
 .top img{width:48px; height:48px; object-fit:cover; border-radius:10px; box-shadow:var(--shadow-sm)}
 .top h1{font-size:clamp(20px,3vw,28px); line-height:1.1}
 .top p{margin:2px 0 0; color:var(--muted); font-size:13px}
-nav.tabs{position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line);
+.top .nome{flex:1; min-width:0}
+#status{flex:none; font-size:12px; white-space:nowrap}
+.leitura .so-escrita{display:none!important}
+nav.tabs{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg); border-bottom:1px solid var(--line);
   display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; margin:0 -16px; padding:0 16px}
 nav.tabs::-webkit-scrollbar{display:none}
 nav.tabs a{flex:none; padding:12px 12px 10px; color:var(--muted); text-decoration:none; font-weight:500; font-size:14px;
@@ -152,11 +159,12 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
 <body>
 <div class="wrap">
   <header class="top">
-    <img src="../estudio-dormir-acordar/assets/logo.jpg" alt="Logo Dormir & Acordar">
-    <div>
+    <img src="logo.jpg" alt="Logo Dormir & Acordar">
+    <div class="nome">
       <h1>Estoque Dormir &amp; Acordar</h1>
       <p>Pijamas · controle de estoque, vendas e MEI</p>
     </div>
+    <span id="status" class="tag mut" role="status">Só neste aparelho</span>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -170,6 +178,9 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
     <a href="#ajustes">Ajustes</a>
   </nav>
 
+  <div id="avisoLeitura" class="aviso mt" hidden>Você pode ver o estoque, mas não pode lançar nem alterar. Peça ao dono para mudar seu acesso para <b>Colaborador</b> (Contributor) no botão Compartilhar.</div>
+  <div id="avisoMigrar" class="aviso mt" hidden><span id="migrarTxt"></span>
+    <div class="row mt"><button class="btn sm" id="bMigrar">Enviar para o banco de dados</button><button class="btn ghost sm" id="bMigrarNao">Agora não</button></div></div>
   <div id="semSalvar" class="aviso bad mt" hidden>Este navegador não está deixando salvar os dados (modo anônimo ou armazenamento bloqueado). O que você lançar agora some ao fechar a página. Use <b>Ajustes → Baixar backup</b> antes de sair.</div>
 
   <!-- PAINEL -->
@@ -183,7 +194,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
       <p>1) Cadastre seus pijamas em <b>Produtos</b> (um modelo e cor de cada vez, marcando os tamanhos).<br>
       2) Lance as compras em <b>Entrada</b> e as vendas em <b>Saída / venda</b>.<br>
       3) O saldo, o custo médio, o lucro e o limite do MEI são calculados sozinhos.</p>
-      <div class="row"><a class="btn" href="#produtos">Cadastrar produtos</a><button class="btn sec" id="btnExemplo">Ver com dados de exemplo</button></div>
+      <div class="row so-escrita"><a class="btn" href="#produtos">Cadastrar produtos</a><button class="btn sec" id="btnExemplo">Ver com dados de exemplo</button></div>
     </div>
     <div class="grid kpis" id="kpis"></div>
     <div id="alertaMei" class="mt"></div>
@@ -199,7 +210,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   <section class="view" id="v-produtos" hidden>
     <h2>Produtos</h2>
     <p class="sub">Cadastre um modelo e uma cor, marque os tamanhos e já informe quanto tem de cada. Cada tamanho vira um código (SKU).</p>
-    <form class="card" id="formProduto" autocomplete="off">
+    <form class="card so-escrita" id="formProduto" autocomplete="off">
       <h3>Novo produto</h3>
       <div class="fields">
         <div class="field"><label for="pCat">Linha</label>
@@ -239,7 +250,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   <section class="view" id="v-entrada" hidden>
     <h2>Entrada de mercadoria</h2>
     <p class="sub">Compras do fornecedor e devoluções de clientes. O custo médio é recalculado sozinho.</p>
-    <form class="card" id="formEntrada" autocomplete="off">
+    <form class="card so-escrita" id="formEntrada" autocomplete="off">
       <div class="fields">
         <div class="field"><label for="eTipo">Tipo</label>
           <select id="eTipo"><option value="compra">Compra de fornecedor</option><option value="devolucao">Devolução / troca de cliente</option></select></div>
@@ -263,7 +274,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   <section class="view" id="v-saida" hidden>
     <h2>Saída / venda</h2>
     <p class="sub">Vendas, perdas (defeito, furto) e brindes ou uso próprio.</p>
-    <form class="card" id="formSaida" autocomplete="off">
+    <form class="card so-escrita" id="formSaida" autocomplete="off">
       <div class="fields">
         <div class="field"><label for="sTipo">Tipo</label>
           <select id="sTipo"><option value="venda">Venda</option><option value="perda">Perda / defeito</option><option value="brinde">Brinde / uso próprio</option></select></div>
@@ -314,7 +325,7 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
         <thead><tr><th>Produto</th><th class="n">No sistema</th><th class="n">Contado</th><th class="n">Diferença</th><th class="n">Valor (custo)</th></tr></thead>
         <tbody id="tbInv"></tbody><tfoot id="tfInv"></tfoot>
       </table></div>
-      <div class="row end mt"><button class="btn" id="iLancar">Lançar ajustes</button></div>
+      <div class="row end mt so-escrita"><button class="btn" id="iLancar">Lançar ajustes</button></div>
     </div>
   </section>
 
@@ -358,19 +369,23 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
         <div class="row end mt"><button class="btn" type="submit">Salvar</button></div>
       </form>
       <div class="card">
-        <h3>Cópia de segurança</h3>
-        <p>Os dados ficam guardados <b>neste aparelho e neste navegador</b>. Baixe um backup toda semana e guarde no Google Drive ou WhatsApp. Para usar em outro aparelho, baixe aqui e carregue lá.</p>
+        <h3>Onde ficam os dados</h3>
+        <p id="ondeTxt"></p>
+        <h3 class="mt">Cópia de segurança</h3>
+        <p>Baixe um backup toda semana e guarde no Google Drive ou WhatsApp.</p>
         <div class="row"><button class="btn" id="bBaixar">Baixar backup</button>
-          <label class="btn sec" style="margin:0">Carregar backup<input type="file" id="bCarregar" accept=".json,application/json" hidden></label></div>
+          <label class="btn sec so-escrita" style="margin:0">Carregar backup<input type="file" id="bCarregar" accept=".json,application/json" hidden></label></div>
         <p class="sub mt" id="bInfo"></p>
         <hr style="border:0; border-top:1px solid var(--line); margin:16px 0">
         <h3>Planilhas</h3>
         <div class="row"><button class="btn ghost" id="bCsvProd">Estoque atual (CSV)</button><button class="btn ghost" id="bCsvMov">Todos os lançamentos (CSV)</button></div>
         <p class="sub mt">Os arquivos CSV abrem no Excel e no Google Planilhas.</p>
         <hr style="border:0; border-top:1px solid var(--line); margin:16px 0">
+        <div class="so-escrita">
         <h3>Zerar</h3>
-        <p class="sub">Apaga produtos e lançamentos deste aparelho. Baixe um backup antes.</p>
+        <p class="sub">Apaga produtos e lançamentos. Baixe um backup antes.</p>
         <button class="btn danger" id="bZerar">Apagar todos os dados</button>
+        </div>
       </div>
     </div>
   </section>
@@ -400,17 +415,29 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   </form>
 </dialog>
 
-<div id="toast" hidden role="status"></div>
+<dialog id="dlgConf">
+  <form method="dialog" id="formConf" autocomplete="off">
+    <h3 id="confTit" style="margin-bottom:8px">Confirmar</h3>
+    <p id="confMsg" style="white-space:pre-line; margin-top:0"></p>
+    <div class="field" id="confDigBox" hidden><label for="confDig">Para confirmar, digite APAGAR</label><input type="text" id="confDig" autocapitalize="characters"></div>
+    <div class="row end mt"><button class="btn ghost" value="nao" formnovalidate>Cancelar</button><button class="btn" id="confOk" value="sim">Confirmar</button></div>
+  </form>
+</dialog>
+
+<div id="toast" hidden></div>
 
 <script>
 "use strict";
 /* ============================================================
    Estoque Dormir & Acordar — HTML, CSS e JavaScript puro.
-   Dados guardados no navegador (localStorage), com backup em JSON.
+   Aberta no claude.ai: dados no banco de dados compartilhado do artifact (capacidade "db"),
+   ao vivo para todos que têm acesso. Aberta em outro lugar (GitHub Pages): dados no navegador
+   (localStorage). Nos dois casos há backup em JSON.
    Custo: método do custo médio ponderado móvel.
    ============================================================ */
 
 const CHAVE = "da-estoque-v1";
+const CHAVE_TEMA = "da-estoque-tema";
 const TAM_ADULTO = ["PP", "P", "M", "G", "GG"];
 const TAM_INFANTIL = ["RN", "1", "2", "3", "4", "6", "8", "10", "12", "14", "16"];
 const MODELOS = [
@@ -467,7 +494,14 @@ function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200);
 }
-function baixar(nome, conteudo, tipo) {
+let baixador = null; // capacidade "downloads" no claude.ai
+async function baixar(nome, conteudo, tipo) {
+  if (baixador) {
+    try { await baixador.save({ filename: nome, data: conteudo }); }
+    catch (e) { if (e?.code !== "declined") toast("Não foi possível baixar o arquivo agora. Tente de novo."); }
+    return;
+  }
+  if (noClaude) return toast("Baixar arquivos não está disponível nesta tela.");
   const blob = new Blob([conteudo], { type: tipo });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
   document.body.appendChild(a); a.click(); a.remove();
@@ -479,11 +513,24 @@ function csv(linhas) {
   return "﻿" + linhas.map(l => l.map(cel).join(";")).join("\r\n");
 }
 
+/* Confirmação dentro da página (o claude.ai não mostra confirm/prompt do navegador) */
+function confirmar(msg, { titulo = "Confirmar", ok = "Confirmar", perigo = false, digitar = "" } = {}) {
+  return new Promise(res => {
+    const d = $("#dlgConf");
+    $("#confTit").textContent = titulo; $("#confMsg").textContent = msg;
+    $("#confOk").textContent = ok; $("#confOk").className = perigo ? "btn danger" : "btn";
+    $("#confDigBox").hidden = !digitar; $("#confDig").value = "";
+    d.returnValue = "";
+    d.onclose = () => { d.onclose = null; res(d.returnValue === "sim" && (!digitar || $("#confDig").value.trim().toUpperCase() === digitar)); };
+    d.showModal();
+  });
+}
+
 /* ---------- dados ---------- */
 let D = novoBanco();
 let podeSalvar = true;
 function novoBanco() {
-  return { versao: 1, produtos: [], movs: [], cfg: { nome: "", cnpj: "", limite: LIMITE_PADRAO, das: DAS_PADRAO, abertura: "", tema: "", dasPago: {} } };
+  return { versao: 1, produtos: [], movs: [], cfg: { nome: "", cnpj: "", limite: LIMITE_PADRAO, das: DAS_PADRAO, abertura: "", dasPago: {} } };
 }
 function carregar() {
   try {
@@ -496,19 +543,142 @@ function normalizar(d) {
   b.produtos = d.produtos; b.movs = d.movs;
   b.cfg = Object.assign(b.cfg, d.cfg || {});
   b.cfg.dasPago = b.cfg.dasPago || {};
+  delete b.cfg.tema; // a aparência é de cada aparelho
   return b;
 }
 function salvar() {
+  calc = null;
+  if (nuvem) return enviarMudancas();
   try { localStorage.setItem(CHAVE, JSON.stringify(D)); podeSalvar = true; }
   catch (e) { podeSalvar = false; }
   $("#semSalvar").hidden = podeSalvar;
-  calc = null;
+}
+function lerTema() { try { return localStorage.getItem(CHAVE_TEMA) || ""; } catch { return ""; } }
+function gravarTema(t) { try { t ? localStorage.setItem(CHAVE_TEMA, t) : localStorage.removeItem(CHAVE_TEMA); } catch {} }
+
+/* ---------- banco de dados compartilhado (claude.ai) ----------
+   Um documento por produto (produtos/<id>), um por lançamento (movs/<id>) e config/geral.
+   salvar() compara o estado com o último visto no banco e grava só o que mudou. */
+const noClaude = !!(window.claude && typeof window.claude.use === "function");
+let nuvem = null, somenteLeitura = false, nuvemPronta = false;
+let espelho = { produtos: new Map(), movs: new Map(), cfg: "" };
+const chegou = { produtos: false, movs: false, cfg: false };
+let fila = Promise.resolve(), gravando = 0, falhou = false;
+
+function status(txt, cls = "mut") { const s = $("#status"); s.textContent = txt; s.className = "tag " + cls; }
+function statusNuvem() {
+  if (!nuvem) return status("Só neste aparelho", "mut");
+  if (falhou) return status("Erro ao salvar", "bad");
+  if (gravando) return status("Salvando…", "warn");
+  if (somenteLeitura) return status("Só leitura", "mut");
+  status(nuvemPronta ? "Banco de dados ✓" : "Conectando…", nuvemPronta ? "ok" : "warn");
+}
+const espera = ms => new Promise(r => setTimeout(r, ms));
+async function tentar(op) {
+  for (let i = 0; ; i++) {
+    try { return await op(); }
+    catch (e) {
+      const c = e?.code;
+      if ((c === "unavailable" || c === "resource_exhausted") && i < 5) { await espera((400 + Math.random() * 800) * (i + 1)); continue; }
+      throw e;
+    }
+  }
+}
+function enviarMudancas() {
+  const ops = [];
+  for (const col of ["produtos", "movs"]) {
+    const vistos = new Set(), ref = nuvem.collection(col);
+    for (const x of D[col]) {
+      vistos.add(x.id);
+      const j = JSON.stringify(x);
+      if (espelho[col].get(x.id) !== j) { espelho[col].set(x.id, j); ops.push(() => ref.doc(x.id).set(JSON.parse(j))); }
+    }
+    for (const id of [...espelho[col].keys()]) if (!vistos.has(id)) { espelho[col].delete(id); ops.push(() => ref.doc(id).delete()); }
+  }
+  const c = JSON.stringify(D.cfg);
+  if (c !== espelho.cfg) { espelho.cfg = c; ops.push(() => nuvem.doc("config/geral").set(JSON.parse(c))); }
+  if (!ops.length) return;
+  gravando++; statusNuvem();
+  // uma leva por vez (no máximo 8 gravações juntas): o mesmo documento nunca é gravado duas vezes ao mesmo tempo
+  fila = fila.then(async () => {
+    let erro = null;
+    for (let i = 0; i < ops.length; i += 8) {
+      const r = await Promise.allSettled(ops.slice(i, i + 8).map(tentar));
+      erro = erro || r.find(x => x.status === "rejected")?.reason;
+    }
+    gravando--;
+    if (erro) {
+      falhou = true;
+      const c = erro?.code;
+      if (c === "invalid_argument" || c === "not_granted") ligarLeitura(true);
+      toast(c === "quota_exceeded" ? "O banco de dados está cheio. Baixe um backup e apague lançamentos antigos." :
+            c === "invalid_argument" || c === "not_granted" ? "Você não tem permissão para alterar. Nada foi salvo." :
+            "Não deu para salvar tudo. Confira a internet; os dados foram recarregados do banco.");
+      await recarregarDaNuvem();
+    } else falhou = false;
+    statusNuvem();
+  });
+}
+async function recarregarDaNuvem() {
+  try {
+    const [p, m, c] = await Promise.all([nuvem.collection("produtos").get(), nuvem.collection("movs").get(), nuvem.doc("config/geral").get()]);
+    aplicarColecao("produtos", p); aplicarColecao("movs", m); aplicarCfg(c);
+  } catch {}
+}
+function aplicarColecao(col, snap) {
+  D[col] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  espelho[col] = new Map(D[col].map(x => [x.id, JSON.stringify(x)]));
+  chegou[col] = true; calc = null; depoisDaNuvem();
+}
+function aplicarCfg(snap) {
+  D.cfg = Object.assign(novoBanco().cfg, snap.exists ? snap.data() : {});
+  D.cfg.dasPago = { ...(D.cfg.dasPago || {}) }; delete D.cfg.tema;
+  espelho.cfg = snap.exists ? JSON.stringify(D.cfg) : "";
+  chegou.cfg = true; depoisDaNuvem();
+}
+let redesenho = 0;
+function depoisDaNuvem() {
+  if (!chegou.produtos || !chegou.movs || !chegou.cfg) return;
+  const primeira = !nuvemPronta;
+  nuvemPronta = true; statusNuvem();
+  if (primeira) oferecerMigracao();
+  // não refaz telas com formulário em uso quando outra pessoa lança algo
+  if (!primeira && ["entrada", "saida", "inventario"].includes(location.hash.slice(1))) return;
+  cancelAnimationFrame(redesenho); redesenho = requestAnimationFrame(renderAtual);
+}
+function oferecerMigracao() {
+  let local = null;
+  try { const t = localStorage.getItem(CHAVE); if (t) local = JSON.parse(t); } catch {}
+  const temLocal = local && Array.isArray(local.produtos) && Array.isArray(local.movs) && local.produtos.length;
+  if (!temLocal || D.produtos.length || D.movs.length || somenteLeitura) return;
+  $("#migrarTxt").textContent = `Este aparelho tem ${local.produtos.length} códigos e ${local.movs.length} lançamentos guardados só nele. Quer enviar para o banco de dados compartilhado?`;
+  $("#avisoMigrar").hidden = false;
+  $("#bMigrar").onclick = () => { D = normalizar(local); salvar(); $("#avisoMigrar").hidden = true; toast("Dados enviados para o banco de dados."); renderAtual(); };
+  $("#bMigrarNao").onclick = () => { $("#avisoMigrar").hidden = true; };
+}
+function ligarLeitura(sim) {
+  somenteLeitura = sim;
+  document.body.classList.toggle("leitura", sim);
+  $("#avisoLeitura").hidden = !sim;
+}
+async function iniciarNuvem() {
+  status("Conectando…", "warn");
+  window.claude.use("downloads").then(d => { baixador = d; }).catch(() => {});
+  let db = null, user = null;
+  try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch {}
+  if (!db) { statusNuvem(); return; }
+  try { if (user && await user.can("data.write") === false) ligarLeitura(true); } catch {}
+  nuvem = db; D = novoBanco(); calc = null; renderAtual();
+  const erro = e => status(e?.code === "revoked" ? "Sem acesso" : "Sem conexão · recarregue", "bad");
+  db.collection("produtos").onSnapshot(s => aplicarColecao("produtos", s), erro);
+  db.collection("movs").onSnapshot(s => aplicarColecao("movs", s), erro);
+  db.doc("config/geral").onSnapshot(aplicarCfg, erro);
 }
 const prodPorId = id => D.produtos.find(p => p.id === id);
 const nomeProd = p => p ? `${p.modelo} · ${p.cor} · ${p.tam}` : "(produto apagado)";
 
 /* SKU: iniciais do modelo + 3 letras da cor + tamanho, sem repetir */
-function semAcento(s) { return s.normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+function semAcento(s) { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
 function gerarSku(modelo, cor, tam) {
   const ini = semAcento(modelo).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(w => w && !["DE", "E", "DA", "DO"].includes(w)).map(w => w[0]).join("").slice(0, 4) || "PJ";
   const c = semAcento(cor).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "X";
@@ -593,7 +763,7 @@ function renderAtual() { render(VIEWS.includes(location.hash.slice(1)) ? locatio
 function rPainel() {
   const { est } = calcular();
   const mes = $("#painelMes").value || mesDe(hoje());
-  $("#boasVindas").hidden = D.produtos.length > 0;
+  $("#boasVindas").hidden = D.produtos.length > 0 || (nuvem && !nuvemPronta);
   const t = totais(mes);
   let valorCusto = 0, valorVenda = 0, pecas = 0;
   for (const p of D.produtos) { const e = est[p.id]; if (e.saldo > 0) { valorCusto += e.saldo * e.cm; valorVenda += e.saldo * p.preco; pecas += e.saldo; } }
@@ -709,13 +879,20 @@ function abrirEdicao(id) {
   $("#dlgProd").returnValue = "";
   $("#dlgProd").showModal();
 }
-function fecharEdicao() {
-  const acao = $("#dlgProd").returnValue, p = editando; editando = null;
+async function fecharEdicao() {
+  const acao = $("#dlgProd").returnValue, id = editando?.id; editando = null;
+  const p = prodPorId(id); // pega o atual: o banco pode ter trocado o objeto enquanto o diálogo estava aberto
   if (!p) return;
   if (acao === "excluir") {
     const usos = D.movs.filter(m => m.prod === p.id).length;
-    if (usos) { if (!confirm(`${nomeProd(p)} tem ${usos} lançamentos. Não dá para excluir sem perder o histórico.\n\nDeixar como INATIVO (some das vendas, mas guarda o histórico)?`)) return; p.ativo = false; }
-    else { if (!confirm(`Excluir ${nomeProd(p)}?`)) return; D.produtos = D.produtos.filter(x => x !== p); }
+    if (usos) {
+      if (!await confirmar(`${nomeProd(p)} tem ${usos} lançamentos. Excluir apagaria o histórico.\n\nDeixar como inativo? Ele some das vendas, mas o histórico fica guardado.`, { titulo: "Não dá para excluir", ok: "Deixar inativo" })) return;
+      const atual = prodPorId(id); if (!atual) return;
+      atual.ativo = false;
+    } else {
+      if (!await confirmar(`Excluir ${nomeProd(p)}?`, { titulo: "Excluir produto", ok: "Excluir", perigo: true })) return;
+      D.produtos = D.produtos.filter(x => x.id !== id);
+    }
   } else if (acao === "salvar") {
     const custo = numero($("#dCusto").value), preco = numero($("#dPreco").value);
     if (!(preco > 0) || !(custo >= 0)) return toast("Custo ou preço inválido. Nada foi alterado.");
@@ -878,10 +1055,10 @@ function rHist() {
   }).join("") : `<tr><td colspan="10" class="vazio">Nenhum lançamento ${$("#hMes").value ? "neste mês" : ""}.</td></tr>`;
   $("#tfHist").innerHTML = lista.length ? `<tr><td colspan="5">${N(lista.length)} lançamentos · faturamento</td><td class="n">${R(tRec)}</td><td class="n">${R(tCmv)}</td><td colspan="3">lucro bruto ${R(tRec - tCmv)}</td></tr>` : "";
 }
-function apagarMov(id) {
+async function apagarMov(id) {
   const m = D.movs.find(x => x.id === id); if (!m) return;
-  if (!confirm(`Apagar este lançamento?\n\n${TIPOS[m.tipo].nome} · ${dataBR(m.data)} · ${nomeProd(prodPorId(m.prod))} · ${m.qtd} pç`)) return;
-  const resto = D.movs.filter(x => x !== m);
+  if (!await confirmar(`${TIPOS[m.tipo].nome} · ${dataBR(m.data)}\n${nomeProd(prodPorId(m.prod))} · ${m.qtd} pç`, { titulo: "Apagar lançamento?", ok: "Apagar", perigo: true })) return;
+  const resto = D.movs.filter(x => x.id !== id);
   if (negativosNovos(resto).length) return toast("Não dá para apagar: o estoque desse produto ficaria negativo (já houve saída dessas peças). Apague a saída primeiro.");
   D.movs = resto; salvar(); toast("Lançamento apagado."); rHist();
 }
@@ -916,12 +1093,12 @@ function difInv() {
   const n = Object.keys(contagem).length;
   $("#tfInv").innerHTML = n ? `<tr><td colspan="3">${N(n)} produtos contados</td><td class="n">${tq > 0 ? "+" : ""}${N(tq)}</td><td class="n">${R(tv)}</td></tr>` : "";
 }
-function lancarInv() {
+async function lancarInv() {
   const { est } = calcular(), data = $("#iData").value || hoje(), lote = uid(), agora = Date.now();
   const ajustes = Object.entries(contagem).map(([id, c]) => ({ id, d: c - (est[id]?.saldo ?? 0) })).filter(a => a.d !== 0 && prodPorId(a.id));
   if (!Object.keys(contagem).length) return toast("Digite a quantidade contada de pelo menos um produto.");
   if (!ajustes.length) { for (const k in contagem) delete contagem[k]; rInv(); return toast("Tudo confere com o sistema. 👏"); }
-  if (!confirm(`Lançar ${ajustes.length} ajuste(s) de inventário em ${dataBR(data)}?`)) return;
+  if (!await confirmar(`${ajustes.length} ajuste(s) de inventário com data de ${dataBR(data)}.`, { titulo: "Lançar ajustes?", ok: "Lançar" })) return;
   for (const a of ajustes) D.movs.push({ id: uid(), lote, data, tipo: "ajuste", prod: a.id, qtd: a.d, unit: 0, parte: "", doc: "", nf: false, canal: "", obs: "Contagem física", criado: agora });
   salvar(); for (const k in contagem) delete contagem[k];
   toast(`${ajustes.length} ajuste(s) lançado(s).`); rInv();
@@ -973,7 +1150,7 @@ function rMei() {
 }
 function relatorio(m) {
   const t = totais(m), cfg = D.cfg, [a, mm] = m.split("-");
-  $("#relatorio").innerHTML = `
+  const html = `
     <h2 style="font-family:Arial;color:#000;text-align:center;font-size:18px">RELATÓRIO MENSAL DAS RECEITAS BRUTAS</h2>
     <p><b>CNPJ:</b> ${esc(cfg.cnpj) || "________________"}<br><b>Empreendedor individual:</b> ${esc(cfg.nome) || "________________"}<br>
     <b>Período de apuração:</b> ${MESES_LONGO[+mm - 1]} de ${a}</p>
@@ -995,6 +1172,14 @@ function relatorio(m) {
     <p style="margin-top:28px">LOCAL E DATA: ______________________________, ____/____/______</p>
     <p style="margin-top:40px">ASSINATURA DO EMPRESÁRIO: ______________________________________</p>
     <p style="margin-top:24px;font-size:11px">ENCONTRAM-SE ANEXADOS A ESTE RELATÓRIO:<br>– Os documentos fiscais comprobatórios das entradas de mercadorias e serviços tomados referentes ao período;<br>– As notas fiscais relativas às operações ou prestações realizadas eventualmente emitidas.</p>`;
+  if (noClaude) {
+    // no claude.ai a página não imprime: baixa o relatório pronto para abrir e imprimir
+    const doc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório ${MESES_LONGO[+mm - 1]} ${a}</title>
+<style>body{font-family:Arial,sans-serif;font-size:13px;color:#000;max-width:780px;margin:24px auto;padding:0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #000;padding:6px 8px}</style></head><body>${html}</body></html>`;
+    baixar(`relatorio-receitas-${m}.html`, doc, "text/html");
+    return toast("Abra o arquivo baixado e imprima ou salve em PDF.");
+  }
+  $("#relatorio").innerHTML = html;
   window.print();
 }
 
@@ -1002,10 +1187,13 @@ function relatorio(m) {
 function rAjustes() {
   const c = D.cfg;
   $("#cNome").value = c.nome || ""; $("#cCnpj").value = c.cnpj || ""; $("#cLimite").value = moedaTxt(c.limite);
-  $("#cDas").value = moedaTxt(c.das); $("#cAbertura").value = c.abertura || ""; $("#cTema").value = c.tema || "";
-  $("#bInfo").textContent = `Neste aparelho: ${N(D.produtos.length)} códigos e ${N(D.movs.length)} lançamentos.`;
+  $("#cDas").value = moedaTxt(c.das); $("#cAbertura").value = c.abertura || ""; $("#cTema").value = lerTema();
+  $("#bInfo").textContent = `${nuvem ? "No banco de dados" : "Neste aparelho"}: ${N(D.produtos.length)} códigos e ${N(D.movs.length)} lançamentos.`;
+  $("#ondeTxt").innerHTML = nuvem
+    ? "No <b>banco de dados compartilhado</b>. Quem você convidar pelo botão Compartilhar vê tudo ao vivo; como <b>Colaborador</b> (Contributor) também lança vendas e entradas. Cabem cerca de 25 mil lançamentos."
+    : "Só <b>neste aparelho e neste navegador</b>. Para usar o banco de dados compartilhado, abra o estoque pelo link do claude.ai.";
 }
-function aplicarTema() { if (D.cfg.tema) document.documentElement.dataset.theme = D.cfg.tema; else delete document.documentElement.dataset.theme; }
+function aplicarTema() { const t = lerTema(); if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
 
 /* ---------- exemplo ---------- */
 function carregarExemplo() {
@@ -1084,8 +1272,8 @@ function ligar() {
   $("#formCfg").onsubmit = e => {
     e.preventDefault();
     const lim = numero($("#cLimite").value), das = numero($("#cDas").value);
-    Object.assign(D.cfg, { nome: $("#cNome").value.trim(), cnpj: $("#cCnpj").value.trim(), limite: lim > 0 ? r2(lim) : LIMITE_PADRAO, das: das >= 0 ? r2(das) : DAS_PADRAO, abertura: $("#cAbertura").value, tema: $("#cTema").value });
-    salvar(); aplicarTema(); rAjustes(); toast("Ajustes salvos.");
+    gravarTema($("#cTema").value); aplicarTema();
+    if (!somenteLeitura) { Object.assign(D.cfg, { nome: $("#cNome").value.trim(), cnpj: $("#cCnpj").value.trim(), limite: lim > 0 ? r2(lim) : LIMITE_PADRAO, das: das >= 0 ? r2(das) : DAS_PADRAO, abertura: $("#cAbertura").value }); salvar(); } rAjustes(); toast("Ajustes salvos.");
   };
   $("#bBaixar").onclick = () => baixar(`estoque-dormir-acordar-${hoje()}.json`, JSON.stringify(D, null, 1), "application/json");
   $("#bCarregar").onchange = async e => {
@@ -1093,8 +1281,8 @@ function ligar() {
     try {
       const d = JSON.parse(await f.text());
       if (!d || !Array.isArray(d.produtos) || !Array.isArray(d.movs)) throw 0;
-      if (!confirm(`Substituir os dados deste aparelho pelo backup?\n\nBackup: ${d.produtos.length} códigos e ${d.movs.length} lançamentos.\nAqui agora: ${D.produtos.length} códigos e ${D.movs.length} lançamentos.`)) return;
-      D = normalizar(d); salvar(); aplicarTema(); toast("Backup carregado."); rAjustes();
+      if (!await confirmar(`Backup: ${d.produtos.length} códigos e ${d.movs.length} lançamentos.\nAgora ${nuvem ? "no banco" : "aqui"}: ${D.produtos.length} códigos e ${D.movs.length} lançamentos.`, { titulo: "Substituir pelos dados do backup?", ok: "Substituir", perigo: true })) return;
+      D = normalizar(d); salvar(); toast("Backup carregado."); rAjustes();
     } catch { toast("Esse arquivo não é um backup do estoque."); }
   };
   $("#bCsvProd").onclick = () => {
@@ -1103,10 +1291,9 @@ function ligar() {
       ...ordenarProdutos([...D.produtos]).map(p => { const e = est[p.id]; return [p.sku, p.cat, p.modelo, p.cor, p.tam, e.saldo, p.min, r2(e.cm), p.preco, p.preco ? r2((p.preco - e.cm) / p.preco * 100) : "", r2(Math.max(0, e.saldo) * e.cm), p.ativo === false ? "Não" : "Sim"]; })]), "text/csv;charset=utf-8");
   };
   $("#bCsvMov").onclick = () => baixar(`lancamentos-todos-${hoje()}.csv`, csvMovs([...D.movs].sort((a, b) => a.data.localeCompare(b.data))), "text/csv;charset=utf-8");
-  $("#bZerar").onclick = () => {
-    if (!confirm("Apagar TODOS os produtos e lançamentos deste aparelho? Isso não tem volta.")) return;
-    if (prompt('Para confirmar, digite APAGAR') !== "APAGAR") return toast("Nada foi apagado.");
-    const tema = D.cfg.tema; D = novoBanco(); D.cfg.tema = tema; salvar(); toast("Dados apagados."); location.hash = "#painel"; renderAtual();
+  $("#bZerar").onclick = async () => {
+    if (!await confirmar(`Todos os produtos e lançamentos ${nuvem ? "do banco de dados (para todo mundo)" : "deste aparelho"} serão apagados. Isso não tem volta.`, { titulo: "Apagar todos os dados?", ok: "Apagar tudo", perigo: true, digitar: "APAGAR" })) return toast("Nada foi apagado.");
+    D = novoBanco(); salvar(); toast("Dados apagados."); location.hash = "#painel"; renderAtual();
   };
 }
 
@@ -1115,6 +1302,7 @@ aplicarTema();
 $("#semSalvar").hidden = podeSalvar;
 ligar();
 mostrar();
+if (noClaude) iniciarNuvem();
 </script>
 </body>
 </html>
