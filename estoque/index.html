@@ -209,12 +209,14 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   <!-- PRODUTOS -->
   <section class="view" id="v-produtos" hidden>
     <h2>Produtos</h2>
-    <p class="sub">Cadastre um modelo e uma cor, marque os tamanhos e já informe quanto tem de cada. Cada tamanho vira um código (SKU).</p>
+    <p class="sub">Use o mesmo número de modelo do fabricante. Escolha a cor, marque os tamanhos e diga quanto tem de cada: cada tamanho vira um código (ex.: 2050254-ROS-M).</p>
     <form class="card so-escrita" id="formProduto" autocomplete="off">
       <h3>Novo produto</h3>
       <div class="fields">
         <div class="field"><label for="pCat">Linha</label>
           <select id="pCat"><option value="Adulto">Adulto</option><option value="Infantil">Infantil</option></select></div>
+        <div class="field"><label for="pRef">Nº do modelo (do fabricante)</label>
+          <input type="text" id="pRef" list="listaRefs" required placeholder="Ex.: 2050254" autocapitalize="characters" spellcheck="false"></div>
         <div class="field" style="grid-column:span 2"><label for="pModelo">Modelo</label>
           <input type="text" id="pModelo" list="listaModelos" required placeholder="Escolha ou escreva"></div>
         <div class="field"><label for="pCor">Cor / estampa</label><input type="text" id="pCor" list="listaCores" required placeholder="Ex.: Rosa poá"></div>
@@ -228,19 +230,20 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
       <div class="row end mt"><button class="btn" type="submit">Cadastrar</button></div>
     </form>
     <datalist id="listaModelos"></datalist>
+    <datalist id="listaRefs"></datalist>
     <datalist id="listaCores"></datalist>
 
     <div class="card mt">
       <div class="row" style="justify-content:space-between; margin-bottom:10px">
         <h3 style="margin:0">Estoque por produto</h3>
         <div class="row">
-          <input type="search" id="buscaProd" placeholder="Buscar modelo, cor, código…" style="width:220px">
+          <input type="search" id="buscaProd" placeholder="Buscar nº do modelo, cor…" style="width:220px">
           <select id="filtroCat" style="width:auto"><option value="">Todas as linhas</option><option>Adulto</option><option>Infantil</option></select>
           <select id="filtroStatus" style="width:auto"><option value="">Todos</option><option value="repor">Repor</option><option value="zerado">Zerado</option><option value="inativo">Inativos</option></select>
         </div>
       </div>
       <div class="tbl"><table>
-        <thead><tr><th>Código</th><th>Modelo</th><th>Cor</th><th>Tam.</th><th class="n">Saldo</th><th class="n">Mín.</th><th class="n">Custo médio</th><th class="n">Preço</th><th class="n">Margem</th><th class="n">Valor em estoque</th><th>Situação</th><th></th></tr></thead>
+        <thead><tr><th>Código</th><th>Nº modelo</th><th>Modelo</th><th>Cor</th><th>Tam.</th><th class="n">Saldo</th><th class="n">Mín.</th><th class="n">Custo médio</th><th class="n">Preço</th><th class="n">Margem</th><th class="n">Valor em estoque</th><th>Situação</th><th></th></tr></thead>
         <tbody id="tbProdutos"></tbody><tfoot id="tfProdutos"></tfoot>
       </table></div>
     </div>
@@ -397,7 +400,8 @@ dialog::backdrop{background:rgba(20,20,40,.45)}
   <form method="dialog" id="formEdit" autocomplete="off">
     <h3 style="margin-bottom:12px">Editar produto</h3>
     <div class="fields">
-      <div class="field" style="grid-column:1/-1"><label for="dModelo">Modelo</label><input type="text" id="dModelo" list="listaModelos" required></div>
+      <div class="field"><label for="dRef">Nº do modelo (do fabricante)</label><input type="text" id="dRef" list="listaRefs" required autocapitalize="characters" spellcheck="false"></div>
+      <div class="field" style="grid-column:span 2"><label for="dModelo">Modelo</label><input type="text" id="dModelo" list="listaModelos" required></div>
       <div class="field"><label for="dCor">Cor / estampa</label><input type="text" id="dCor" list="listaCores" required></div>
       <div class="field"><label for="dTam">Tamanho</label><select id="dTam"></select></div>
       <div class="field"><label for="dCusto">Custo de cadastro (R$)</label><input type="text" inputmode="decimal" id="dCusto"></div>
@@ -675,20 +679,34 @@ async function iniciarNuvem() {
   db.doc("config/geral").onSnapshot(aplicarCfg, erro);
 }
 const prodPorId = id => D.produtos.find(p => p.id === id);
-const nomeProd = p => p ? `${p.modelo} · ${p.cor} · ${p.tam}` : "(produto apagado)";
+const nomeProd = p => p ? `${p.ref ? p.ref + " · " : ""}${p.modelo} · ${p.cor} · ${p.tam}` : "(produto apagado)";
+const limparRef = r => String(r || "").trim().toUpperCase().replace(/\s+/g, "");
 
-/* SKU: iniciais do modelo + 3 letras da cor + tamanho, sem repetir */
+/* SKU: nº do modelo do fabricante + 3 letras da cor + tamanho (ex.: 2050254-ROS-M), sem repetir.
+   Produto antigo sem nº do modelo: iniciais do modelo no lugar do número. */
 function semAcento(s) { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-function gerarSku(modelo, cor, tam) {
-  const ini = semAcento(modelo).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(w => w && !["DE", "E", "DA", "DO"].includes(w)).map(w => w[0]).join("").slice(0, 4) || "PJ";
+function gerarSku(ref, modelo, cor, tam, exceto) {
+  const ini = limparRef(ref).replace(/[^A-Z0-9]/g, "") || semAcento(modelo).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(w => w && !["DE", "E", "DA", "DO"].includes(w)).map(w => w[0]).join("").slice(0, 4) || "PJ";
   const c = semAcento(cor).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3) || "X";
   let base = `${ini}-${c}-${tam}`, sku = base, i = 2;
-  while (D.produtos.some(p => p.sku === sku)) sku = `${base}-${i++}`;
+  while (D.produtos.some(p => p !== exceto && p.sku === sku)) sku = `${base}-${i++}`;
   return sku;
+}
+/* Mesmo produto = mesmo nº do modelo, cor e tamanho (sem nº: mesma linha, modelo, cor e tamanho) */
+function chaveProd(p) {
+  const b = x => semAcento(String(x || "")).toLowerCase().trim();
+  return p.ref ? `r|${b(p.ref)}|${b(p.cor)}|${p.tam}` : `m|${p.cat}|${b(p.modelo)}|${b(p.cor)}|${p.tam}`;
+}
+/* O nº do modelo já usado precisa continuar com o mesmo nome e linha, para não confundir com a fábrica */
+function conflitoRef(ref, modelo, cat, exceto) {
+  const outro = D.produtos.find(p => p !== exceto && p.ref && p.ref === ref);
+  if (!outro) return "";
+  if (outro.modelo.toLowerCase() !== modelo.toLowerCase() || outro.cat !== cat) return `O nº ${ref} já está cadastrado como "${outro.modelo}" (${outro.cat}). Use o mesmo nome ou confira o número.`;
+  return "";
 }
 function ordemTam(t) { const a = TAM_ADULTO.indexOf(t); if (a >= 0) return 100 + a; const i = TAM_INFANTIL.indexOf(t); return i >= 0 ? i : 200; }
 function ordenarProdutos(lista) {
-  return lista.sort((a, b) => a.cat.localeCompare(b.cat) || a.modelo.localeCompare(b.modelo, "pt") || a.cor.localeCompare(b.cor, "pt") || ordemTam(a.tam) - ordemTam(b.tam));
+  return lista.sort((a, b) => a.cat.localeCompare(b.cat) || a.modelo.localeCompare(b.modelo, "pt") || (a.ref || "").localeCompare(b.ref || "", "pt", { numeric: true }) || a.cor.localeCompare(b.cor, "pt") || ordemTam(a.tam) - ordemTam(b.tam));
 }
 
 /* ---------- motor de cálculo (custo médio ponderado) ---------- */
@@ -810,6 +828,8 @@ function rPainel() {
 function preencherListas() {
   const modelos = [...new Set([...MODELOS, ...D.produtos.map(p => p.modelo)])];
   $("#listaModelos").innerHTML = modelos.map(m => `<option value="${esc(m)}">`).join("");
+  const refs = new Map(); for (const p of D.produtos) if (p.ref && !refs.has(p.ref)) refs.set(p.ref, p.modelo);
+  $("#listaRefs").innerHTML = [...refs].map(([r, m]) => `<option value="${esc(r)}">${esc(m)}</option>`).join("");
   $("#listaCores").innerHTML = [...new Set(D.produtos.map(p => p.cor))].sort().map(c => `<option value="${esc(c)}">`).join("");
   $("#listaFornecedores").innerHTML = [...new Set(D.movs.filter(m => m.tipo === "compra" && m.parte).map(m => m.parte))].map(c => `<option value="${esc(c)}">`).join("");
 }
@@ -834,25 +854,28 @@ function rProdutos() {
     if (st === "inativo" ? p.ativo !== false : p.ativo === false && st !== "") return false;
     if (st === "repor" && !(e.saldo <= p.min)) return false;
     if (st === "zerado" && e.saldo > 0) return false;
-    return !busca || semAcento(`${p.sku} ${p.modelo} ${p.cor} ${p.tam} ${p.cat}`.toLowerCase()).includes(busca);
+    return !busca || semAcento(`${p.ref || ""} ${p.sku} ${p.modelo} ${p.cor} ${p.tam} ${p.cat}`.toLowerCase()).includes(busca);
   }));
   let tq = 0, tv = 0;
   $("#tbProdutos").innerHTML = lista.length ? lista.map(p => {
     const e = est[p.id], valor = Math.max(0, e.saldo) * e.cm; tq += e.saldo; tv += valor;
     const marg = p.preco ? (p.preco - e.cm) / p.preco : NaN;
     const sit = p.ativo === false ? `<span class="tag mut">Inativo</span>` : e.saldo < 0 ? `<span class="tag bad">Negativo</span>` : e.saldo === 0 ? `<span class="tag bad">Zerado</span>` : e.saldo <= p.min ? `<span class="tag warn">Repor</span>` : `<span class="tag ok">OK</span>`;
-    return `<tr><td>${esc(p.sku)}</td><td>${esc(p.modelo)}${p.cat === "Infantil" ? ' <span class="tag mut">Inf.</span>' : ""}</td><td>${esc(p.cor)}</td><td>${esc(p.tam)}</td>
+    return `<tr><td>${esc(p.sku)}</td><td>${p.ref ? `<b>${esc(p.ref)}</b>` : `<span class="tag warn">falta</span>`}</td><td>${esc(p.modelo)}${p.cat === "Infantil" ? ' <span class="tag mut">Inf.</span>' : ""}</td><td>${esc(p.cor)}</td><td>${esc(p.tam)}</td>
       <td class="n"><b>${N(e.saldo)}</b></td><td class="n">${N(p.min)}</td><td class="n">${R(e.cm)}</td><td class="n">${R(p.preco)}</td>
       <td class="n ${marg < 0 ? "neg" : ""}">${P(marg)}</td><td class="n">${R(valor)}</td><td>${sit}</td>
       <td><button class="btn ghost sm" data-edit="${p.id}">Editar</button></td></tr>`;
-  }).join("") : `<tr><td colspan="12" class="vazio">${D.produtos.length ? "Nenhum produto com esse filtro." : "Nenhum produto cadastrado ainda."}</td></tr>`;
-  $("#tfProdutos").innerHTML = lista.length ? `<tr><td colspan="4">${N(lista.length)} códigos</td><td class="n">${N(tq)}</td><td colspan="4"></td><td class="n">${R(tv)}</td><td colspan="2"></td></tr>` : "";
+  }).join("") : `<tr><td colspan="13" class="vazio">${D.produtos.length ? "Nenhum produto com esse filtro." : "Nenhum produto cadastrado ainda."}</td></tr>`;
+  $("#tfProdutos").innerHTML = lista.length ? `<tr><td colspan="5">${N(lista.length)} códigos</td><td class="n">${N(tq)}</td><td colspan="4"></td><td class="n">${R(tv)}</td><td colspan="2"></td></tr>` : "";
 }
 function cadastrarProduto(ev) {
   ev.preventDefault();
-  const cat = $("#pCat").value, modelo = $("#pModelo").value.trim(), cor = $("#pCor").value.trim();
+  const cat = $("#pCat").value, ref = limparRef($("#pRef").value), modelo = $("#pModelo").value.trim(), cor = $("#pCor").value.trim();
   const custo = numero($("#pCusto").value), preco = numero($("#pPreco").value), min = Math.max(0, parseInt($("#pMin").value) || 0);
+  if (!ref) return toast("Informe o nº do modelo do fabricante (ex.: 2050254).");
   if (!modelo || !cor) return toast("Preencha modelo e cor.");
+  const conflito = conflitoRef(ref, modelo, cat);
+  if (conflito) return toast(conflito);
   if (!(custo >= 0) || !(preco > 0)) return toast("Confira o custo e o preço (use vírgula: 39,90).");
   const marcados = $$("#pTams .tam").filter(d => $("input[type=checkbox]", d).checked);
   if (!marcados.length) return toast("Marque pelo menos um tamanho.");
@@ -860,8 +883,9 @@ function cadastrarProduto(ev) {
   let criados = 0, lote = uid();
   for (const d of marcados) {
     const tam = $("input[type=checkbox]", d).value, qtd = Math.max(0, parseInt($("input[type=number]", d).value) || 0);
-    if (D.produtos.some(p => p.cat === cat && p.modelo.toLowerCase() === modelo.toLowerCase() && p.cor.toLowerCase() === cor.toLowerCase() && p.tam === tam)) { repetidos.push(tam); continue; }
-    const p = { id: uid(), sku: gerarSku(modelo, cor, tam), cat, modelo, cor, tam, custo: r2(custo), preco: r2(preco), min, ativo: true, criado: agora };
+    const p = { id: uid(), sku: "", ref, cat, modelo, cor, tam, custo: r2(custo), preco: r2(preco), min, ativo: true, criado: agora };
+    if (D.produtos.some(x => chaveProd(x) === chaveProd(p))) { repetidos.push(tam); continue; }
+    p.sku = gerarSku(ref, modelo, cor, tam);
     D.produtos.push(p); criados++;
     if (qtd > 0) D.movs.push({ id: uid(), lote, data, tipo: "inicial", prod: p.id, qtd, unit: r2(custo), parte: "", doc: "", nf: false, canal: "", obs: "Estoque inicial no cadastro", criado: agora });
   }
@@ -873,7 +897,7 @@ function cadastrarProduto(ev) {
 let editando = null;
 function abrirEdicao(id) {
   const p = prodPorId(id); if (!p) return; editando = p;
-  $("#dModelo").value = p.modelo; $("#dCor").value = p.cor;
+  $("#dRef").value = p.ref || ""; $("#dModelo").value = p.modelo; $("#dCor").value = p.cor;
   $("#dTam").innerHTML = tamanhosDe(p.cat).map(t => `<option ${t === p.tam ? "selected" : ""}>${t}</option>`).join("");
   $("#dCusto").value = moedaTxt(p.custo); $("#dPreco").value = moedaTxt(p.preco); $("#dMin").value = p.min; $("#dAtivo").checked = p.ativo !== false;
   $("#dlgProd").returnValue = "";
@@ -896,22 +920,34 @@ async function fecharEdicao() {
   } else if (acao === "salvar") {
     const custo = numero($("#dCusto").value), preco = numero($("#dPreco").value);
     if (!(preco > 0) || !(custo >= 0)) return toast("Custo ou preço inválido. Nada foi alterado.");
-    const tam = $("#dTam").value;
-    if (D.produtos.some(x => x !== p && x.cat === p.cat && x.modelo.toLowerCase() === $("#dModelo").value.trim().toLowerCase() && x.cor.toLowerCase() === $("#dCor").value.trim().toLowerCase() && x.tam === tam))
-      return toast("Já existe outro código com esse modelo, cor e tamanho.");
-    Object.assign(p, { modelo: $("#dModelo").value.trim() || p.modelo, cor: $("#dCor").value.trim() || p.cor, tam, custo: r2(custo), preco: r2(preco), min: Math.max(0, parseInt($("#dMin").value) || 0), ativo: $("#dAtivo").checked });
+    const tam = $("#dTam").value, ref = limparRef($("#dRef").value), modelo = $("#dModelo").value.trim() || p.modelo, cor = $("#dCor").value.trim() || p.cor;
+    if (!ref) return toast("Informe o nº do modelo do fabricante. Nada foi alterado.");
+    // nº do modelo e nome valem para todas as cores e tamanhos do mesmo modelo
+    const irmaos = D.produtos.filter(x => p.ref ? x.ref === p.ref : !x.ref && x.cat === p.cat && x.modelo === p.modelo);
+    const fora = D.produtos.filter(x => !irmaos.includes(x));
+    const conflito = D.produtos.find(x => fora.includes(x) && x.ref === ref);
+    if (conflito) return toast(`O nº ${ref} já está cadastrado como "${conflito.modelo}". Nada foi alterado.`);
+    const novo = { ...p, ref, modelo, cor, tam };
+    if (D.produtos.some(x => x !== p && chaveProd(x) === chaveProd(novo))) return toast("Já existe outro código com esse nº do modelo, cor e tamanho. Nada foi alterado.");
+    const mudouModelo = ref !== (p.ref || "") || modelo !== p.modelo;
+    Object.assign(p, { cor, tam, custo: r2(custo), preco: r2(preco), min: Math.max(0, parseInt($("#dMin").value) || 0), ativo: $("#dAtivo").checked });
+    const alvo = mudouModelo ? irmaos : [p];
+    for (const x of alvo) { x.ref = ref; x.modelo = modelo; x.sku = gerarSku(ref, modelo, x.cor, x.tam, x); }
+    salvar(); toast(alvo.length > 1 ? `Nº do modelo e nome atualizados em ${alvo.length} códigos (todas as cores e tamanhos).` : "Produto atualizado."); renderAtual();
+    return;
   } else return;
   salvar(); toast("Produto atualizado."); renderAtual();
 }
 
 /* ---------- ENTRADA e SAÍDA (linhas de itens) ---------- */
 /* Escolha em dois passos, bom no celular: primeiro "modelo · cor", depois o tamanho. */
+const grupoDe = p => `${p.ref || ""}|${p.cat}|${p.modelo}|${p.cor}`;
 function grupos(soAtivos) {
   const g = new Map();
   for (const p of ordenarProdutos([...D.produtos])) {
     if (soAtivos && p.ativo === false) continue;
-    const k = `${p.cat}|${p.modelo}|${p.cor}`;
-    if (!g.has(k)) g.set(k, { rot: `${p.modelo} · ${p.cor}${p.cat === "Infantil" ? " (infantil)" : ""}`, prods: [] });
+    const k = grupoDe(p);
+    if (!g.has(k)) g.set(k, { rot: `${p.ref ? p.ref + " · " : ""}${p.modelo} · ${p.cor}${p.cat === "Infantil" ? " (infantil)" : ""}`, prods: [] });
     g.get(k).prods.push(p);
   }
   return g;
@@ -973,7 +1009,7 @@ function prepararItens(lado) {
   for (const i of antes) {
     const p = prodPorId(i.prod); if (!p) continue;
     const div = novaLinha(lado), selG = $(".g", div);
-    selG.value = `${p.cat}|${p.modelo}|${p.cor}`; selG.onchange();
+    selG.value = grupoDe(p); selG.onchange();
     $(".t", div).value = p.id; $(".q", div).value = i.qtd; $(".u", div).value = moedaTxt(i.unit);
   }
   if (!$(`#${lado}Itens`).children.length) novaLinha(lado);
@@ -1064,8 +1100,8 @@ async function apagarMov(id) {
 }
 function csvMovs(lista) {
   const { res } = calcular();
-  return csv([["Data", "Tipo", "Código", "Modelo", "Cor", "Tamanho", "Linha", "Quantidade", "Valor unitário", "Total", "Custo (CMV/perda)", "Canal", "Cliente/Fornecedor", "Nº NF", "Com nota fiscal", "Observação"],
-    ...lista.map(m => { const p = prodPorId(m.prod) || {}, r = res[m.id] || {}; return [dataBR(m.data), TIPOS[m.tipo].nome, p.sku, p.modelo, p.cor, p.tam, p.cat, m.tipo === "ajuste" || TIPOS[m.tipo].sinal > 0 ? m.qtd : -m.qtd, m.unit, r2(m.qtd * m.unit), r2((r.cmv || 0) + (r.perda || 0)), m.canal, m.parte, m.doc, m.nf ? "Sim" : "Não", m.obs]; })]);
+  return csv([["Data", "Tipo", "Código", "Nº do modelo", "Modelo", "Cor", "Tamanho", "Linha", "Quantidade", "Valor unitário", "Total", "Custo (CMV/perda)", "Canal", "Cliente/Fornecedor", "Nº NF", "Com nota fiscal", "Observação"],
+    ...lista.map(m => { const p = prodPorId(m.prod) || {}, r = res[m.id] || {}; return [dataBR(m.data), TIPOS[m.tipo].nome, p.sku, p.ref, p.modelo, p.cor, p.tam, p.cat, m.tipo === "ajuste" || TIPOS[m.tipo].sinal > 0 ? m.qtd : -m.qtd, m.unit, r2(m.qtd * m.unit), r2((r.cmv || 0) + (r.perda || 0)), m.canal, m.parte, m.doc, m.nf ? "Sim" : "Não", m.obs]; })]);
 }
 
 /* ---------- INVENTÁRIO ---------- */
@@ -1073,7 +1109,7 @@ const contagem = {};
 function rInv() {
   if (!$("#iData").value) $("#iData").value = hoje();
   const { est } = calcular(), busca = semAcento($("#iBusca").value.toLowerCase());
-  const lista = ordenarProdutos(D.produtos.filter(p => p.ativo !== false && (!busca || semAcento(`${p.sku} ${p.modelo} ${p.cor} ${p.tam}`.toLowerCase()).includes(busca))));
+  const lista = ordenarProdutos(D.produtos.filter(p => p.ativo !== false && (!busca || semAcento(`${p.ref || ""} ${p.sku} ${p.modelo} ${p.cor} ${p.tam}`.toLowerCase()).includes(busca))));
   $("#tbInv").innerHTML = lista.length ? lista.map(p => `<tr data-id="${p.id}"><td>${esc(nomeProd(p))}<div class="sub" style="margin:0;font-size:12px">${esc(p.sku)}</div></td>
     <td class="n">${N(est[p.id].saldo)}</td>
     <td class="n"><input type="number" inputmode="numeric" min="0" step="1" style="width:90px; text-align:right" aria-label="Contado de ${esc(nomeProd(p))}" value="${contagem[p.id] ?? ""}"></td>
@@ -1199,19 +1235,19 @@ function aplicarTema() { const t = lerTema(); if (t) document.documentElement.da
 function carregarExemplo() {
   D = novoBanco(); D.cfg.nome = "Dormir & Acordar (exemplo)";
   const base = [
-    ["Adulto", "Short doll de alça", "Rosa poá", 32, 79.9, ["PP", "P", "M", "G", "GG"]],
-    ["Adulto", "Short doll manga curta", "Azul estrelas", 35, 84.9, ["P", "M", "G", "GG"]],
-    ["Adulto", "Pijama longo (manga longa e calça)", "Xadrez vinho", 58, 149.9, ["P", "M", "G", "GG"]],
-    ["Adulto", "Pijama americano longo (botões)", "Off white", 72, 179.9, ["P", "M", "G"]],
-    ["Adulto", "Camisola de alça", "Lilás", 28, 69.9, ["P", "M", "G"]],
-    ["Infantil", "Infantil curto", "Dinossauros", 22, 59.9, ["2", "4", "6", "8"]],
-    ["Infantil", "Infantil longo", "Unicórnio", 30, 79.9, ["4", "6", "8", "10"]]
+    ["2050254", "Adulto", "Short doll de alça", "Rosa poá", 32, 79.9, ["PP", "P", "M", "G", "GG"]],
+    ["2050261", "Adulto", "Short doll manga curta", "Azul estrelas", 35, 84.9, ["P", "M", "G", "GG"]],
+    ["2050310", "Adulto", "Pijama longo (manga longa e calça)", "Xadrez vinho", 58, 149.9, ["P", "M", "G", "GG"]],
+    ["2050327", "Adulto", "Pijama americano longo (botões)", "Off white", 72, 179.9, ["P", "M", "G"]],
+    ["2050198", "Adulto", "Camisola de alça", "Lilás", 28, 69.9, ["P", "M", "G"]],
+    ["3010045", "Infantil", "Infantil curto", "Dinossauros", 22, 59.9, ["2", "4", "6", "8"]],
+    ["3010052", "Infantil", "Infantil longo", "Unicórnio", 30, 79.9, ["4", "6", "8", "10"]]
   ];
   const agora = Date.now(); let n = 0;
   const dia = (mAtras, d) => { const x = new Date(); x.setDate(1); x.setMonth(x.getMonth() - mAtras); x.setDate(Math.min(d, 28)); return isoLocal(x) > hoje() ? hoje() : isoLocal(x); };
   let seed = 7; const rnd = k => (seed = (seed * 9301 + 49297) % 233280) / 233280 * k;
-  for (const [cat, modelo, cor, custo, preco, tams] of base) for (const tam of tams) {
-    const p = { id: uid() + n++, sku: gerarSku(modelo, cor, tam), cat, modelo, cor, tam, custo, preco, min: 2, ativo: true, criado: agora };
+  for (const [ref, cat, modelo, cor, custo, preco, tams] of base) for (const tam of tams) {
+    const p = { id: uid() + n++, sku: gerarSku(ref, modelo, cor, tam), ref, cat, modelo, cor, tam, custo, preco, min: 2, ativo: true, criado: agora };
     D.produtos.push(p);
   }
   for (let m = 5; m >= 0; m--) {
@@ -1244,6 +1280,16 @@ function ligar() {
   $("#btnExemplo").onclick = carregarExemplo;
   // produtos
   $("#pCat").onchange = rTams;
+  $("#pRef").addEventListener("change", () => {
+    const ref = limparRef($("#pRef").value), p = D.produtos.find(x => x.ref === ref);
+    $("#pRef").value = ref;
+    if (!p) return;
+    $("#pModelo").value = p.modelo;
+    if ($("#pCat").value !== p.cat) { $("#pCat").value = p.cat; rTams(); }
+    if (!$("#pCusto").value) $("#pCusto").value = moedaTxt(p.custo);
+    if (!$("#pPreco").value) $("#pPreco").value = moedaTxt(p.preco);
+    rMargemForm(); toast(`Nº ${ref}: ${p.modelo}. Agora escolha a cor nova e os tamanhos.`);
+  });
   $("#pCusto").oninput = $("#pPreco").oninput = rMargemForm;
   $("#formProduto").onsubmit = cadastrarProduto;
   $("#pTams").addEventListener("input", e => { if (e.target.type === "number" && e.target.value) e.target.closest(".tam").querySelector("input[type=checkbox]").checked = true; });
@@ -1287,8 +1333,8 @@ function ligar() {
   };
   $("#bCsvProd").onclick = () => {
     const { est } = calcular();
-    baixar(`estoque-atual-${hoje()}.csv`, csv([["Código", "Linha", "Modelo", "Cor", "Tamanho", "Saldo", "Estoque mínimo", "Custo médio", "Preço de venda", "Margem %", "Valor em estoque (custo)", "Ativo"],
-      ...ordenarProdutos([...D.produtos]).map(p => { const e = est[p.id]; return [p.sku, p.cat, p.modelo, p.cor, p.tam, e.saldo, p.min, r2(e.cm), p.preco, p.preco ? r2((p.preco - e.cm) / p.preco * 100) : "", r2(Math.max(0, e.saldo) * e.cm), p.ativo === false ? "Não" : "Sim"]; })]), "text/csv;charset=utf-8");
+    baixar(`estoque-atual-${hoje()}.csv`, csv([["Código", "Nº do modelo", "Linha", "Modelo", "Cor", "Tamanho", "Saldo", "Estoque mínimo", "Custo médio", "Preço de venda", "Margem %", "Valor em estoque (custo)", "Ativo"],
+      ...ordenarProdutos([...D.produtos]).map(p => { const e = est[p.id]; return [p.sku, p.ref || "", p.cat, p.modelo, p.cor, p.tam, e.saldo, p.min, r2(e.cm), p.preco, p.preco ? r2((p.preco - e.cm) / p.preco * 100) : "", r2(Math.max(0, e.saldo) * e.cm), p.ativo === false ? "Não" : "Sim"]; })]), "text/csv;charset=utf-8");
   };
   $("#bCsvMov").onclick = () => baixar(`lancamentos-todos-${hoje()}.csv`, csvMovs([...D.movs].sort((a, b) => a.data.localeCompare(b.data))), "text/csv;charset=utf-8");
   $("#bZerar").onclick = async () => {
